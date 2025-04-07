@@ -91,6 +91,9 @@ REACT_APP_ENV=production
 
 # UI Configuration
 REACT_APP_DEFAULT_LANGUAGE=pt-BR
+
+# Google OAuth integration
+REACT_APP_GOOGLE_CLIENT_ID=962233999748-f4cb4ckls4mfdbp2i3o0s26dqvrbu0ag.apps.googleusercontent.com
 EOF"
 check_error "Falha ao criar arquivo .env.production"
 

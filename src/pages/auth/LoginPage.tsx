@@ -37,6 +37,7 @@ const validationSchema = yup.object({
 const LoginPage: React.FC = () => {
   const { login, loginWithGoogle, error, loading, clearError } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [isGoogleLoginDisabled, setIsGoogleLoginDisabled] = useState(false);
 
   // Form handling with Formik
   const formik = useFormik({
@@ -57,14 +58,16 @@ const LoginPage: React.FC = () => {
   // Configuração do login com Google
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      try {
-        await loginWithGoogle(tokenResponse.access_token);
-      } catch (error) {
-        console.error('Erro no login com Google:', error);
+      if (!isGoogleLoginDisabled) {
+        try {
+          await loginWithGoogle(tokenResponse.access_token);
+        } catch (error) {
+          console.error('Erro no login com Google:', error);
+        }
       }
     },
-    onError: () => {
-      console.error('Login com Google falhou');
+    onError: (error) => {
+      console.error('Erro na autenticação com Google:', error);
     }
   });
 

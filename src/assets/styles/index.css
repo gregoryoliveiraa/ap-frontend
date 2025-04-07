@@ -29,12 +29,12 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: rgba(124, 58, 237, 0.5);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgba(124, 58, 237, 0.7);
 }
 
 /* Rich text editor styles */
@@ -73,7 +73,7 @@ a {
 
 .message.user {
   align-self: flex-end;
-  background-color: #2E3B55;
+  background-color: rgba(124, 58, 237, 1);
   color: white;
 }
 

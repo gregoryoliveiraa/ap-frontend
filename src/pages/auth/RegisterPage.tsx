@@ -48,6 +48,7 @@ const RegisterPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [isGoogleLoginDisabled, setIsGoogleLoginDisabled] = useState(false);
 
   // Form handling with Formik
   const formik = useFormik({
@@ -90,18 +91,20 @@ const RegisterPage: React.FC = () => {
     setShowConfirmPassword(!showConfirmPassword);
   };
   
-  // Configuração do cadastro com Google
-  const googleRegister = useGoogleLogin({
+  // Configuração do login com Google
+  const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      try {
-        // O endpoint de autenticação com Google deve criar uma conta se não existir
-        await loginWithGoogle(tokenResponse.access_token);
-      } catch (error) {
-        console.error('Erro no cadastro com Google:', error);
+      if (!isGoogleLoginDisabled) {
+        try {
+          // O endpoint de autenticação com Google deve criar uma conta se não existir
+          await loginWithGoogle(tokenResponse.access_token);
+        } catch (error) {
+          console.error('Erro no registro com Google:', error);
+        }
       }
     },
-    onError: () => {
-      console.error('Cadastro com Google falhou');
+    onError: (error) => {
+      console.error('Erro na autenticação com Google:', error);
     }
   });
 
@@ -246,7 +249,7 @@ const RegisterPage: React.FC = () => {
             variant="outlined"
             color="primary"
             startIcon={<GoogleIcon />}
-            onClick={() => googleRegister()}
+            onClick={() => googleLogin()}
             sx={{ mb: 2 }}
             disabled={loading}
           >

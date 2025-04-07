@@ -26,7 +26,6 @@ import NotificationsIcon from '@mui/icons-material/Notifications';
 import HelpIcon from '@mui/icons-material/Help';
 import DataUsageIcon from '@mui/icons-material/DataUsage';
 import { useAuth } from '../contexts/AuthContext';
-import logo from '../assets/images/logo.svg';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
@@ -98,7 +97,6 @@ const Header: React.FC = () => {
       <Toolbar>
         {/* Logo */}
         <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-          <img src={logo} alt="Logo" style={{ height: 40, marginRight: 8 }} />
           <Typography
             variant="h6"
             component={RouterLink}

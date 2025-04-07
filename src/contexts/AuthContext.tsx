@@ -74,6 +74,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
       
+      // Get current path to handle public routes
+      const currentPath = window.location.pathname;
+      const publicRoutes = ['/', '/login', '/register', '/termos', '/privacidade', '/reset-password'];
+      const isPublicRoute = publicRoutes.some(route => currentPath === route);
+      
       if (token) {
         try {
           // Check if token is expired
@@ -94,6 +99,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Get user data
           const response = await api.get('/api/v1/users/me');
           setUser(response.data);
+          
+          // If user is already authenticated and trying to access login page, redirect to dashboard
+          if (currentPath === '/login' || currentPath === '/register') {
+            navigate('/dashboard');
+          }
         } catch (err) {
           console.error('Error validating authentication:', err);
           localStorage.removeItem('token');
@@ -105,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     
     checkAuth();
-  }, []);
+  }, [navigate]);
   
   const login = async (email: string, password: string) => {
     try {

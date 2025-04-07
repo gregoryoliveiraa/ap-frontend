@@ -51,13 +51,19 @@ api.interceptors.response.use(
     
     // Handle expired token or unauthorized access
     if (error.response && error.response.status === 401) {
-      // Only redirect if not on login page and not on public pages
-      if (!window.location.pathname.includes('/login') && 
-          !window.location.pathname.includes('/register') &&
-          !window.location.pathname.includes('/reset-password')) {
+      // Avoid redirecting if already on login page or other public routes
+      const publicRoutes = ['/login', '/register', '/reset-password', '/', '/termos', '/privacidade'];
+      const isPublicRoute = publicRoutes.some(route => window.location.pathname.startsWith(route));
+      
+      if (!isPublicRoute) {
+        console.log('Unauthorized access detected, redirecting to login');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        // Use history API instead of direct assignment to avoid page refresh
+        window.history.pushState({}, '', '/login');
+        // Dispatch a navigation event to trigger React Router
+        window.dispatchEvent(new Event('popstate'));
+        return Promise.reject(error);
       }
     }
     return Promise.reject(error);

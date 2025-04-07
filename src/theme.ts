@@ -3,9 +3,9 @@ import { createTheme } from '@mui/material/styles';
 export const theme = createTheme({
   palette: {
     primary: {
-      main: '#5D5FEF', // Azul violeta moderno
-      light: '#8B8EFF',
-      dark: '#3A3CB9',
+      main: 'rgba(124, 58, 237, 1)', // Roxo principal
+      light: 'rgba(139, 92, 246, 1)', // Roxo mais claro
+      dark: 'rgba(109, 40, 217, 1)', // Roxo mais escuro
       contrastText: '#ffffff',
     },
     secondary: {
@@ -20,7 +20,7 @@ export const theme = createTheme({
     },
     text: {
       primary: '#2E3B55',
-      secondary: '#5D5FEF',
+      secondary: 'rgba(124, 58, 237, 1)',
     },
   },
   typography: {
@@ -35,15 +35,15 @@ export const theme = createTheme({
     ].join(','),
     h1: {
       fontWeight: 700,
-      color: '#5D5FEF',
+      color: 'rgba(124, 58, 237, 1)',
     },
     h2: {
       fontWeight: 700,
-      color: '#5D5FEF',
+      color: 'rgba(124, 58, 237, 1)',
     },
     h3: {
       fontWeight: 700,
-      color: '#5D5FEF',
+      color: 'rgba(124, 58, 237, 1)',
     },
     h4: {
       fontWeight: 600,
@@ -67,26 +67,26 @@ export const theme = createTheme({
           fontWeight: 600,
         },
         contained: {
-          backgroundColor: '#5D5FEF',
+          backgroundColor: 'rgba(124, 58, 237, 1)',
           color: '#ffffff',
           '&:hover': {
-            backgroundColor: '#3A3CB9',
+            backgroundColor: 'rgba(109, 40, 217, 1)',
           },
         },
         outlined: {
-          borderColor: '#5D5FEF',
-          color: '#5D5FEF',
+          borderColor: 'rgba(124, 58, 237, 1)',
+          color: 'rgba(124, 58, 237, 1)',
           '&:hover': {
-            borderColor: '#3A3CB9',
-            color: '#3A3CB9',
-            backgroundColor: 'rgba(93, 95, 239, 0.04)',
+            borderColor: 'rgba(109, 40, 217, 1)',
+            color: 'rgba(109, 40, 217, 1)',
+            backgroundColor: 'rgba(124, 58, 237, 0.04)',
           },
         },
         text: {
-          color: '#5D5FEF',
+          color: 'rgba(124, 58, 237, 1)',
           '&:hover': {
-            color: '#3A3CB9',
-            backgroundColor: 'rgba(93, 95, 239, 0.04)',
+            color: 'rgba(109, 40, 217, 1)',
+            backgroundColor: 'rgba(124, 58, 237, 0.04)',
           },
         },
       },
@@ -110,9 +110,9 @@ export const theme = createTheme({
     MuiLink: {
       styleOverrides: {
         root: {
-          color: '#5D5FEF',
+          color: 'rgba(124, 58, 237, 1)',
           '&:hover': {
-            color: '#3A3CB9',
+            color: 'rgba(109, 40, 217, 1)',
           },
         },
       },
@@ -120,9 +120,9 @@ export const theme = createTheme({
     MuiIconButton: {
       styleOverrides: {
         root: {
-          color: '#5D5FEF',
+          color: 'rgba(124, 58, 237, 1)',
           '&:hover': {
-            backgroundColor: 'rgba(93, 95, 239, 0.04)',
+            backgroundColor: 'rgba(124, 58, 237, 0.04)',
           },
         },
       },
@@ -130,8 +130,8 @@ export const theme = createTheme({
     MuiChip: {
       styleOverrides: {
         root: {
-          backgroundColor: 'rgba(93, 95, 239, 0.08)',
-          color: '#5D5FEF',
+          backgroundColor: 'rgba(124, 58, 237, 0.08)',
+          color: 'rgba(124, 58, 237, 1)',
         },
       },
     },

@@ -12,14 +12,25 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
-root.render(
-  <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+// Verificar se o login com Google está desabilitado
+const isGoogleLoginDisabled = process.env.REACT_APP_DISABLE_GOOGLE_LOGIN === 'true';
+
+const AppWithProviders = () => (
+  <ThemeProvider theme={theme}>
+    <CssBaseline />
+    {isGoogleLoginDisabled ? (
+      <App />
+    ) : (
       <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID || ''}>
         <App />
       </GoogleOAuthProvider>
-    </ThemeProvider>
+    )}
+  </ThemeProvider>
+);
+
+root.render(
+  <React.StrictMode>
+    <AppWithProviders />
   </React.StrictMode>
 );
 
