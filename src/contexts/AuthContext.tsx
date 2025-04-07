@@ -74,11 +74,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
       
-      // Get current path to handle public routes
-      const currentPath = window.location.pathname;
-      const publicRoutes = ['/', '/login', '/register', '/termos', '/privacidade', '/reset-password'];
-      const isPublicRoute = publicRoutes.some(route => currentPath === route);
-      
       if (token) {
         try {
           // Check if token is expired
@@ -97,13 +92,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           
           // Get user data
-          const response = await api.get('/api/v1/users/me');
+          const response = await api.get('users/me');
           setUser(response.data);
-          
-          // If user is already authenticated and trying to access login page, redirect to dashboard
-          if (currentPath === '/login' || currentPath === '/register') {
-            navigate('/dashboard');
-          }
         } catch (err) {
           console.error('Error validating authentication:', err);
           localStorage.removeItem('token');
@@ -115,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     
     checkAuth();
-  }, [navigate]);
+  }, []);
   
   const login = async (email: string, password: string) => {
     try {
@@ -127,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       formData.append('username', email);
       formData.append('password', password);
       
-      const response = await api.post('/api/v1/auth/login', formData, {
+      const response = await api.post('auth/login', formData, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         }
@@ -146,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       try {
         // Get user data
-        const userResponse = await api.get('/api/v1/users/me');
+        const userResponse = await api.get('users/me');
         console.log('User data response:', userResponse.data);
         
         if (!userResponse.data) {
@@ -196,7 +186,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('Dados para registro:', JSON.stringify(requestData, null, 2));
       
-      const response = await api.post('/api/v1/auth/register', requestData);
+      const response = await api.post('auth/register', requestData);
       
       console.log('Registro bem-sucedido:', response.status);
       
@@ -209,7 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginFormData.append('username', userData.email);
         loginFormData.append('password', userData.password);
         
-        const loginResponse = await api.post('/api/v1/auth/login', loginFormData, {
+        const loginResponse = await api.post('auth/login', loginFormData, {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
           }
@@ -221,7 +211,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
         
         // Get user data
-        const userResponse = await api.get('/api/v1/users/me');
+        const userResponse = await api.get('users/me');
         setUser(userResponse.data);
         
         // Redirecionar para o dashboard
@@ -280,7 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(null);
       
       // Here you would normally update the user data through API
-      // await api.put('/api/v1/users/me', userData);
+      // await api.put('users/me', userData);
       
       // For now, just update the local state
       if (user) {
@@ -306,7 +296,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(null);
       
       // Chamar o endpoint de login com Google no backend
-      const response = await api.post('/api/v1/auth/google', { token }, {
+      const response = await api.post('auth/google', { token }, {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -319,7 +309,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       try {
         // Obter dados do usuário
-        const userResponse = await api.get('/api/v1/users/me');
+        const userResponse = await api.get('users/me');
         setUser(userResponse.data);
         
         navigate('/dashboard');

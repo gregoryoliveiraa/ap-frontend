@@ -37,7 +37,7 @@ export interface TemplateCategories {
  */
 export const getTemplateCategories = async (): Promise<TemplateCategories> => {
   try {
-    const response = await api.get('/api/v1/documents/templates/categories');
+    const response = await api.get('/documents/templates/categories');
     return response.data.data;
   } catch (error) {
     console.error('Erro ao obter categorias de templates:', error);
@@ -62,7 +62,7 @@ export const listTemplates = async (
     if (categoria) params.categoria = categoria;
     if (subcategoria) params.subcategoria = subcategoria;
     
-    const response = await api.get('/api/v1/documents/templates', { params });
+    const response = await api.get('/documents/templates', { params });
     return {
       templates: response.data.data,
       total: response.data.total
@@ -78,7 +78,7 @@ export const listTemplates = async (
  */
 export const getTemplateDetails = async (templateId: string): Promise<TemplateDetails> => {
   try {
-    const response = await api.get(`/api/v1/documents/templates/${templateId}`);
+    const response = await api.get(`/documents/templates/${templateId}`);
     return response.data.data;
   } catch (error) {
     console.error('Erro ao obter detalhes do template:', error);
@@ -94,7 +94,7 @@ export const generateAiSuggestions = async (
   description: string
 ): Promise<any> => {
   try {
-    const response = await api.post('/api/v1/documents/ai-complete', {
+    const response = await api.post('/documents/ai-complete', {
       template_id: templateId,
       description
     });
@@ -142,7 +142,7 @@ export const generateDocument = async (
     
     // Importante: Não definir o Content-Type e deixar o navegador configurar automaticamente
     // para que os limites (boundaries) do multipart/form-data sejam definidos corretamente
-    const response = await api.post('/api/v1/documents/generate', formData);
+    const response = await api.post('/documents/generate', formData);
     
     console.log('Resposta de geração:', response.data);
     return response.data.data;
@@ -160,7 +160,7 @@ export const generateDocument = async (
  */
 export const getUserDocuments = async (): Promise<Document[]> => {
   try {
-    const response = await api.get('/api/v1/documents');
+    const response = await api.get('/documents');
     console.log('Documentos recebidos da API:', response.data);
     return response.data.data.map((doc: any) => ({
       ...doc,
@@ -181,7 +181,7 @@ export const getUserDocuments = async (): Promise<Document[]> => {
  */
 export const getDocument = async (documentId: string): Promise<Document> => {
   try {
-    const response = await api.get(`/api/v1/documents/${documentId}`);
+    const response = await api.get(`/documents/${documentId}`);
     const doc = response.data.data;
     return {
       ...doc,
@@ -207,7 +207,7 @@ export const updateDocument = async (
 ): Promise<Document> => {
   try {
     console.log('Atualizando documento:', documentId, data);
-    const response = await api.put(`/api/v1/documents/${documentId}`, data);
+    const response = await api.put(`/documents/${documentId}`, data);
     const doc = response.data.data;
     return {
       ...doc,
@@ -265,7 +265,7 @@ export const previewDocument = async (
       }
     };
     
-    const response = await api.post('/api/v1/documents/preview', formData, config);
+    const response = await api.post('/documents/preview', formData, config);
     
     console.log('Resposta de preview:', response.data);
     return response.data.data;

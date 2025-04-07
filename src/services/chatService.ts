@@ -83,7 +83,7 @@ const transformDates = (session: any): ChatSession => {
  */
 export const getChatSessions = async (): Promise<ChatSession[]> => {
   try {
-    const response = await api.get('/api/v1/chat');
+    const response = await api.get('/chat');
     return response.data.map(transformDates);
   } catch (error) {
     console.error('Error getting chat sessions:', error);
@@ -97,7 +97,7 @@ export const getChatSessions = async (): Promise<ChatSession[]> => {
 export const getChatSession = async (sessionId: string): Promise<ChatSession> => {
   try {
     console.log('Fetching session:', sessionId);
-    const response = await api.get(`/api/v1/chat/${sessionId}`);
+    const response = await api.get(`/chat/${sessionId}`);
     console.log('API response:', response.data);
     const session = response.data;
     
@@ -121,7 +121,7 @@ export const getChatSession = async (sessionId: string): Promise<ChatSession> =>
  */
 export const createChatSession = async (title = 'Nova Conversa'): Promise<ChatSession> => {
   try {
-    const response = await api.post('/api/v1/chat', { title });
+    const response = await api.post('/chat', { title });
     return transformDates(response.data);
   } catch (error) {
     console.error('Error creating chat session:', error);
@@ -137,7 +137,7 @@ export const updateChatSession = async (
   data: { title?: string }
 ): Promise<ChatSession> => {
   try {
-    const response = await api.put(`/api/v1/chat/${sessionId}`, data);
+    const response = await api.put(`/chat/${sessionId}`, data);
     return transformDates(response.data);
   } catch (error) {
     console.error('Error updating chat session:', error);
@@ -150,7 +150,7 @@ export const updateChatSession = async (
  */
 export const sendMessage = async (data: ChatRequest): Promise<ChatResponse> => {
   try {
-    const response = await api.post('/api/v1/chat/message', data);
+    const response = await api.post('/chat/message', data);
     return response.data;
   } catch (error) {
     console.error('Error sending message:', error);
@@ -166,7 +166,7 @@ export const streamChat = async (
   onChunk: (chunk: string) => void
 ): Promise<void> => {
   try {
-    const response = await fetch(`${api.defaults.baseURL}/api/v1/chat/stream`, {
+    const response = await fetch(`${api.defaults.baseURL}/chat/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -214,7 +214,7 @@ export const streamChat = async (
  */
 export const deleteChatSession = async (sessionId: string): Promise<void> => {
   try {
-    await api.delete(`/api/v1/chat/${sessionId}`);
+    await api.delete(`/chat/${sessionId}`);
   } catch (error) {
     console.error('Error deleting chat session:', error);
     throw error;

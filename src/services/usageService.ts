@@ -29,7 +29,7 @@ export interface UsageData {
 }
 
 export const getUsageData = async (): Promise<UsageData> => {
-  const response = await fetch('/api/v1/usage', {
+  const response = await fetch('/usage', {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -45,7 +45,7 @@ export const getUsageData = async (): Promise<UsageData> => {
 };
 
 export const addCredits = async (amount: number, payment_method: string, card_data?: any): Promise<void> => {
-  const response = await fetch('/api/v1/users/add-credits', {
+  const response = await fetch('/users/add-credits', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ export const addCredits = async (amount: number, payment_method: string, card_da
 
 export const getUserUsage = async (): Promise<UsageData> => {
   try {
-    const response = await api.get('/api/v1/usage');
+    const response = await api.get('/usage');
     
     // Log para debug
     console.log('Raw API response:', response.data);
