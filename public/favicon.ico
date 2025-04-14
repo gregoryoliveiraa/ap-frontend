@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Círculo base da balança (dourado) -->
+  <circle cx="24" cy="24" r="22" fill="#D4AF37" opacity="0.1"/>
+  
+  <!-- Base da balança -->
+  <rect x="17" y="38" width="14" height="2" rx="1" fill="#8A2BE2"/>
+  
+  <!-- Suporte da balança -->
+  <rect x="23" y="20" width="2" height="18" fill="#8A2BE2"/>
+  
+  <!-- Braço da balança -->
+  <rect x="10" y="20" width="28" height="2" rx="1" fill="#8A2BE2"/>
+  
+  <!-- Pratos da balança -->
+  <circle cx="10" cy="24" r="5" stroke="#8A2BE2" stroke-width="1.5" fill="none"/>
+  <circle cx="38" cy="24" r="5" stroke="#8A2BE2" stroke-width="1.5" fill="none"/>
+  
+  <!-- Iniciais AP -->
+  <text x="16" y="14" font-family="Arial" font-weight="bold" font-size="8" fill="#8A2BE2">AP</text>
+</svg>

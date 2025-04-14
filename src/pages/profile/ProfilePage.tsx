@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Container, 
   Box, 
@@ -22,10 +22,26 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  IconButton,
+  Badge,
+  Tooltip,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import PhotoCamera from '@mui/icons-material/PhotoCamera';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { validatePassword } from '../../utils/passwordValidator';
+import PasswordStrengthMeter from '../../components/PasswordStrengthMeter';
+import * as userService from '../../services/userService';
+import useFileUpload from '../../hooks/useFileUpload';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -50,7 +66,7 @@ const TabPanel: React.FC<TabPanelProps> = (props) => {
 };
 
 const ProfilePage: React.FC = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, uploadAvatar, deleteAvatar, refreshUserData, updatePassword } = useAuth();
   const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [formData, setFormData] = useState({
@@ -77,16 +93,53 @@ const ProfilePage: React.FC = () => {
     enterprise: 199.90
   };
 
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+  const [passwordWarnings, setPasswordWarnings] = useState<string[]>([]);
+  const [passwordScore, setPasswordScore] = useState<number>(0);
+
+  // Replace the existing file handling code with our new hook
+  const {
+    fileState,
+    fileInputRef,
+    handleFileChange,
+    triggerFileInput,
+    uploadFile
+  } = useFileUpload({
+    maxSizeInBytes: 2 * 1024 * 1024, // 2MB
+    acceptedFileTypes: ['image/jpeg', 'image/png', 'image/jpg']
+  });
+
+  // Buscar dados atualizados do usuário ao montar o componente
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchUserData = async () => {
+      if (isMounted) {
+        await refreshUserData();
+      }
+    };
+    
+    fetchUserData();
+    
+    return () => {
+      isMounted = false;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Remover refreshUserData das dependências
+
   useEffect(() => {
     if (user) {
-      setFormData({
-        ...formData,
+      console.log('User data updated:', user);
+      setFormData(prevData => ({
+        ...prevData,
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         email: user.email || '',
         phone: user.phone || '',
         oab: user.oab || '',
-      });
+      }));
     }
   }, [user]);
 
@@ -96,10 +149,19 @@ const ProfilePage: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
     setFormData({
       ...formData,
       [name]: value
     });
+    
+    // Validar força da senha quando o campo de nova senha é alterado
+    if (name === 'newPassword') {
+      const result = validatePassword(value);
+      setPasswordErrors(result.errors);
+      setPasswordWarnings(result.warnings);
+      setPasswordScore(result.score);
+    }
   };
 
   const handleEditToggle = () => {
@@ -125,14 +187,22 @@ const ProfilePage: React.FC = () => {
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // In a real app, you would send this data to your API
-      await updateUser({
+      console.log('Submitting data:', formData);
+      // Enviar os dados para a API - sem incluir o email que não é editável
+      const updatedUser = await updateUser({
         firstName: formData.firstName,
         lastName: formData.lastName,
-        email: formData.email,
         phone: formData.phone,
         oab: formData.oab,
       });
+      
+      console.log('Response from API:', updatedUser);
+      
+      // Atualizar o formData com os dados retornados pela API, se disponível
+      if (updatedUser) {
+        // Não precisamos atualizar o formData aqui, pois o useEffect vai cuidar disso
+        console.log('Form data after update:', formData);
+      }
       
       setNotification({
         open: true,
@@ -141,6 +211,7 @@ const ProfilePage: React.FC = () => {
       });
       setIsEditing(false);
     } catch (error) {
+      console.error('Error updating profile:', error);
       setNotification({
         open: true,
         message: 'Erro ao atualizar perfil. Tente novamente.',
@@ -152,6 +223,7 @@ const ProfilePage: React.FC = () => {
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Verificar se as senhas coincidem
     if (formData.newPassword !== formData.confirmPassword) {
       setNotification({
         open: true,
@@ -161,12 +233,20 @@ const ProfilePage: React.FC = () => {
       return;
     }
     
+    // Validar força da senha
+    const passwordValidation = validatePassword(formData.newPassword);
+    if (!passwordValidation.isValid) {
+      setNotification({
+        open: true,
+        message: 'A senha não atende aos requisitos mínimos de segurança.',
+        severity: 'error'
+      });
+      return;
+    }
+    
     try {
-      // In a real app, you would send this data to your API
-      // await api.post('/auth/change-password', {
-      //   currentPassword: formData.currentPassword,
-      //   newPassword: formData.newPassword
-      // });
+      // Enviar requisição para atualizar a senha
+      await updatePassword(formData.currentPassword, formData.newPassword);
       
       setNotification({
         open: true,
@@ -174,23 +254,50 @@ const ProfilePage: React.FC = () => {
         severity: 'success'
       });
       
+      // Limpar campos após atualização bem-sucedida
       setFormData({
         ...formData,
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
       });
-    } catch (error) {
-      setNotification({
-        open: true,
-        message: 'Erro ao atualizar senha. Tente novamente.',
-        severity: 'error'
-      });
+      
+      // Resetar estados de validação
+      setPasswordErrors([]);
+      setPasswordWarnings([]);
+      setPasswordScore(0);
+    } catch (error: any) {
+      console.error('Erro ao atualizar senha:', error);
+      
+      // Verificar se o erro é devido à senha atual incorreta
+      if (error.response?.status === 401 || 
+          error.response?.data?.detail?.includes('senha atual')) {
+        setNotification({
+          open: true,
+          message: 'A senha atual está incorreta.',
+          severity: 'error'
+        });
+      } else {
+        setNotification({
+          open: true,
+          message: 'Erro ao atualizar senha. Tente novamente.',
+          severity: 'error'
+        });
+      }
     }
   };
 
   const handleCloseNotification = () => {
     setNotification({ ...notification, open: false });
+  };
+
+  // Helper function to open notifications
+  const handleOpenNotification = (message: string, severity: 'success' | 'error') => {
+    setNotification({
+      open: true,
+      message,
+      severity
+    });
   };
 
   // Adicionar funções para gerenciar o popup de planos
@@ -230,6 +337,41 @@ const ProfilePage: React.FC = () => {
     handleClosePlanDialog();
   };
 
+  const handleAvatarClick = () => {
+    setAvatarDialogOpen(true);
+  };
+
+  const handleCloseAvatarDialog = () => {
+    setAvatarDialogOpen(false);
+  };
+
+  const handleAvatarChange = async () => {
+    if (fileState.loading) return;
+    
+    try {
+      await uploadFile(userService.uploadAvatar);
+      
+      // Update user context after successful upload
+      const updatedUser = await userService.getCurrentUser();
+      if (updateUser) {
+        updateUser(updatedUser);
+      }
+      
+      handleOpenNotification('Avatar atualizado com sucesso!', 'success');
+      handleCloseAvatarDialog();
+    } catch (error) {
+      handleOpenNotification('Erro ao atualizar avatar. Tente novamente.', 'error');
+    }
+  };
+
+  const handleAvatarButtonClick = () => {
+    if (fileState.file) {
+      handleAvatarChange();
+    } else {
+      triggerFileInput();
+    }
+  };
+
   if (!user) {
     return (
       <Container maxWidth="md">
@@ -244,13 +386,35 @@ const ProfilePage: React.FC = () => {
     <Container maxWidth="md">
       <Paper elevation={0} sx={{ mb: 4, p: 3, borderRadius: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-          <Avatar
-            sx={{ width: 80, height: 80, bgcolor: 'primary.main', mr: 2 }}
-            src={user.avatar}
+          <Badge
+            overlap="circular"
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            badgeContent={
+              <Tooltip title="Alterar foto">
+                <IconButton
+                  sx={{
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    '&:hover': { bgcolor: 'primary.dark' },
+                    width: 32,
+                    height: 32,
+                  }}
+                  onClick={handleAvatarClick}
+                >
+                  <PhotoCamera fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            }
           >
-            {!user.avatar && `${user.firstName?.[0]}${user.lastName?.[0]}`}
-          </Avatar>
-          <Box>
+            <Avatar
+              sx={{ width: 80, height: 80, bgcolor: 'primary.main', cursor: 'pointer' }}
+              src={user.avatar}
+              onClick={handleAvatarClick}
+            >
+              {!user.avatar && `${user.firstName?.[0]}${user.lastName?.[0]}`}
+            </Avatar>
+          </Badge>
+          <Box sx={{ ml: 2 }}>
             <Typography variant="h5">
               {user.firstName} {user.lastName}
             </Typography>
@@ -309,8 +473,10 @@ const ProfilePage: React.FC = () => {
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  disabled={!isEditing}
-                  required
+                  disabled={true}
+                  InputProps={{
+                    readOnly: true,
+                  }}
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -387,7 +553,61 @@ const ProfilePage: React.FC = () => {
                   value={formData.newPassword}
                   onChange={handleInputChange}
                   required
+                  error={passwordErrors.length > 0}
                 />
+                
+                {formData.newPassword && (
+                  <>
+                    <PasswordStrengthMeter score={passwordScore} />
+                    
+                    {passwordErrors.length > 0 && (
+                      <List dense disablePadding sx={{ mt: 1 }}>
+                        {passwordErrors.map((error, index) => (
+                          <ListItem key={index} disablePadding sx={{ py: 0.5 }}>
+                            <ListItemIcon sx={{ minWidth: 36 }}>
+                              <ErrorOutlineIcon color="error" fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText 
+                              primary={error} 
+                              primaryTypographyProps={{ 
+                                variant: 'caption',
+                                color: 'error.main'
+                              }}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    )}
+                    
+                    {passwordWarnings.length > 0 && passwordErrors.length === 0 && (
+                      <List dense disablePadding sx={{ mt: 1 }}>
+                        {passwordWarnings.map((warning, index) => (
+                          <ListItem key={index} disablePadding sx={{ py: 0.5 }}>
+                            <ListItemIcon sx={{ minWidth: 36 }}>
+                              <WarningAmberIcon color="warning" fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText 
+                              primary={warning} 
+                              primaryTypographyProps={{ 
+                                variant: 'caption',
+                                color: 'warning.main'
+                              }}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    )}
+                    
+                    {passwordErrors.length === 0 && passwordWarnings.length === 0 && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                        <CheckCircleOutlineIcon color="success" fontSize="small" sx={{ mr: 1 }} />
+                        <Typography variant="caption" color="success.main">
+                          Senha atende a todos os requisitos de segurança
+                        </Typography>
+                      </Box>
+                    )}
+                  </>
+                )}
               </Grid>
               <Grid item xs={12}>
                 <TextField
@@ -508,6 +728,68 @@ const ProfilePage: React.FC = () => {
           <Button onClick={handleClosePlanDialog}>Cancelar</Button>
           <Button onClick={handleChangePlan} variant="contained" color="primary">
             Continuar para Pagamento
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Avatar Dialog */}
+      <Dialog open={avatarDialogOpen} onClose={handleCloseAvatarDialog}>
+        <DialogTitle>Alterar Avatar</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {fileState.preview ? (
+              <Avatar 
+                src={fileState.preview} 
+                sx={{ width: 100, height: 100, mb: 2 }}
+              />
+            ) : (
+              <Avatar 
+                src={user?.avatar || undefined} 
+                sx={{ width: 100, height: 100, mb: 2 }}
+              >
+                {!user.avatar && `${user.firstName?.[0]}${user.lastName?.[0]}`}
+              </Avatar>
+            )}
+            
+            <input
+              type="file"
+              accept="image/png, image/jpeg, image/jpg"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+              ref={fileInputRef}
+            />
+            
+            {fileState.error && (
+              <Typography color="error" variant="body2" sx={{ mt: 1, mb: 1 }}>
+                {fileState.error}
+              </Typography>
+            )}
+            
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <Button 
+                variant="contained" 
+                onClick={triggerFileInput}
+                disabled={fileState.loading}
+              >
+                Selecionar arquivo
+              </Button>
+              
+              {fileState.file && (
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  onClick={handleAvatarChange}
+                  disabled={fileState.loading}
+                >
+                  {fileState.loading ? 'Enviando...' : 'Enviar'}
+                </Button>
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseAvatarDialog} color="primary">
+            Fechar
           </Button>
         </DialogActions>
       </Dialog>

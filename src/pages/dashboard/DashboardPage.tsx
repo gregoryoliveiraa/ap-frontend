@@ -39,7 +39,7 @@ import * as chatService from '../../services/chatService';
 import * as documentService from '../../services/documentService';
 
 const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refreshUserData } = useAuth();
   const theme = useTheme();
   const location = useLocation();
   const [chatSessions, setChatSessions] = useState<any[]>([]);
@@ -53,6 +53,11 @@ const DashboardPage: React.FC = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      
+      // Apenas atualiza os dados do usuário na primeira carga
+      if (user && !user.firstName && user.nome_completo) {
+        await refreshUserData();
+      }
       
       // Fetch usage data for credits and tokens
       const usage = await usageService.getUserUsage();
@@ -79,21 +84,29 @@ const DashboardPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshUserData, user]);
+  
+  // Manter referência da localização atual
+  const history = React.useRef(location.pathname);
+  
+  // Atualiza os dados apenas quando a localização muda para o dashboard
+  useEffect(() => {
+    const isDashboardPage = location.pathname === '/dashboard' || location.pathname === '/';
+    const wasNotDashboardPage = location.key && location.pathname !== history.current;
+    
+    if (isDashboardPage && wasNotDashboardPage) {
+      console.log('Dashboard page active after navigation, fetching fresh data');
+      fetchData();
+      history.current = location.pathname;
+    }
+  }, [location.pathname, location.key, fetchData]);
   
   // Fetch real data from API quando o componente é montado
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
-  // Atualiza os dados sempre que o usuário volta para o dashboard (location.pathname muda)
-  useEffect(() => {
-    if (location.pathname === '/dashboard' || location.pathname === '/') {
-      console.log('Dashboard page active, fetching fresh data');
-      fetchData();
-    }
-  }, [location.pathname, fetchData]);
-
   // Calculate credit usage percentage
   const creditPercentage = () => {
     const max = 100;
@@ -141,10 +154,10 @@ const DashboardPage: React.FC = () => {
         >
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between' }}>
             <Box>
-              <Typography variant="h4" fontWeight="bold" gutterBottom>
-                Bem-vindo(a), {user?.nome_completo?.split(' ')[0]}!
+              <Typography variant="h4" fontWeight="bold" gutterBottom color="white">
+                Bem-vindo(a), {user?.firstName || user?.nome_completo?.split(' ')[0] || 'Usuário'}!
               </Typography>
-              <Typography variant="body1">
+              <Typography variant="body1" color="white">
                 O que você gostaria de fazer hoje?
               </Typography>
             </Box>
@@ -268,7 +281,7 @@ const DashboardPage: React.FC = () => {
         </Grid>
 
         {/* Main Features Section */}
-        <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
+        <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: theme.palette.primary.dark }}>
           Ferramentas
         </Typography>
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -291,8 +304,8 @@ const DashboardPage: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center'
               }}>
-                <ChatIcon sx={{ fontSize: 32, mr: 1 }} />
-                <Typography variant="h6" fontWeight="bold">Assistente Jurídico</Typography>
+                <ChatIcon sx={{ fontSize: 32, mr: 1, color: 'white' }} />
+                <Typography variant="h6" fontWeight="bold" color="white">Assistente Jurídico</Typography>
               </Box>
               <CardContent sx={{ flexGrow: 1 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -335,8 +348,8 @@ const DashboardPage: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center'
               }}>
-                <DescriptionIcon sx={{ fontSize: 32, mr: 1 }} />
-                <Typography variant="h6" fontWeight="bold">Documentos</Typography>
+                <DescriptionIcon sx={{ fontSize: 32, mr: 1, color: 'white' }} />
+                <Typography variant="h6" fontWeight="bold" color="white">Documentos</Typography>
               </Box>
               <CardContent sx={{ flexGrow: 1 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -379,8 +392,8 @@ const DashboardPage: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center'
               }}>
-                <SearchIcon sx={{ fontSize: 32, mr: 1 }} />
-                <Typography variant="h6" fontWeight="bold">Jurisprudência</Typography>
+                <SearchIcon sx={{ fontSize: 32, mr: 1, color: 'white' }} />
+                <Typography variant="h6" fontWeight="bold" color="white">Jurisprudência</Typography>
               </Box>
               <CardContent sx={{ flexGrow: 1 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>

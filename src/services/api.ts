@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080',
+  baseURL: process.env.REACT_APP_API_URL || '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,6 +12,7 @@ api.interceptors.request.use(
   (config) => {
     // Log request headers for debugging
     console.log('Request headers:', config.headers);
+    console.log('Request URL:', `${config.baseURL || ''}${config.url || ''}`);
     
     // Se for um FormData, remover o Content-Type para que o Axios defina automaticamente
     if (config.data instanceof FormData) {
@@ -46,7 +47,8 @@ api.interceptors.response.use(
     console.error('API Error:', {
       status: error.response?.status,
       headers: error.response?.headers,
-      data: error.response?.data
+      data: error.response?.data,
+      url: error.config?.url
     });
     
     // Handle expired token or unauthorized access

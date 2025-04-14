@@ -1,11 +1,21 @@
 {
   "short_name": "Advogada Parceira",
-  "name": "Advogada Parceira - Assistente Jurídica",
+  "name": "Advogada Parceira - Assistente Jurídica Inteligente",
   "icons": [
+    {
+      "src": "favicon.png",
+      "type": "image/png",
+      "sizes": "48x48"
+    },
     {
       "src": "favicon.svg",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/svg+xml"
+    },
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
     },
     {
       "src": "logo192.png",
@@ -20,6 +30,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "rgba(124, 58, 237, 1)",
-  "background_color": "#ffffff"
+  "theme_color": "#E07750",
+  "background_color": "#1E4562"
 } 

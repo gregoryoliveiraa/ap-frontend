@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="32" height="32" rx="8" fill="#6A00C9"/>
-  <path d="M16 8L24 24H8L16 8Z" fill="white"/>
-  <path d="M16 12L20 20H12L16 12Z" fill="#6A00C9"/>
-</svg> 
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Definição do clipping path com bordas arredondadas -->
+  <defs>
+    <clipPath id="rounded-corners">
+      <rect width="48" height="48" rx="12" fill="white"/>
+    </clipPath>
+  </defs>
+  
+  <!-- Grupo com clipping path aplicado -->
+  <g clip-path="url(#rounded-corners)">
+    <!-- Retângulo colorido com a cor principal -->
+    <rect width="48" height="48" fill="#1E4562"/>
+    <!-- Letra A estilizada em laranja -->
+    <path d="M5 35C5 35 7 15 24 15C41 15 43 35 43 35" stroke="#E07750" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M12 25H36" stroke="#E07750" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

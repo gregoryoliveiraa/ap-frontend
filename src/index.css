@@ -1,13 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f7fa;
+  color: #1E4562;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Estilos para scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1E4562;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0F2A44;
+}
+
+/* Classes de utilidade para cores */
+.text-primary {
+  color: #1E4562 !important;
+}
+
+.text-secondary {
+  color: #E07750 !important;
+}
+
+.bg-primary {
+  background-color: #1E4562 !important;
+  color: white !important;
+}
+
+.bg-secondary {
+  background-color: #E07750 !important;
+  color: white !important;
+}
+
+.bg-primary-light {
+  background-color: rgba(30, 69, 98, 0.1) !important;
+}
+
+.bg-secondary-light {
+  background-color: rgba(224, 119, 80, 0.1) !important;
+}
+
+.bg-info-light {
+  background-color: rgba(127, 209, 224, 0.1) !important;
+}
+
+/* Transições para links e botões */
+a, button {
+  transition: all 0.3s ease;
 } 

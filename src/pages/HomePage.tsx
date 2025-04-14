@@ -7,92 +7,125 @@ import {
   Grid,
   Typography,
   Card,
-  CardContent,
-  CardMedia,
-  Paper,
-  Divider,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
+  useTheme,
+  alpha,
 } from '@mui/material';
-import ChatIcon from '@mui/icons-material/Chat';
-import DescriptionIcon from '@mui/icons-material/Description';
-import SearchIcon from '@mui/icons-material/Search';
-import LightbulbIcon from '@mui/icons-material/Lightbulb';
-import SpeedIcon from '@mui/icons-material/Speed';
-import SecurityIcon from '@mui/icons-material/Security';
-
-const features = [
-  {
-    icon: <ChatIcon fontSize="large" color="primary" />,
-    title: 'Assistente Jurídico',
-    description: 'Tire dúvidas jurídicas com IA especializada no sistema jurídico brasileiro.'
-  },
-  {
-    icon: <DescriptionIcon fontSize="large" color="primary" />,
-    title: 'Geração de Documentos',
-    description: 'Crie petições, recursos e outros documentos jurídicos em minutos.'
-  },
-  {
-    icon: <SearchIcon fontSize="large" color="primary" />,
-    title: 'Pesquisa de Jurisprudência',
-    description: 'Encontre decisões relevantes para fortalecer seus argumentos.'
-  },
-];
-
-const benefits = [
-  {
-    icon: <LightbulbIcon fontSize="medium" />,
-    title: 'Aumente sua Produtividade',
-    description: 'Economize horas de pesquisa e redação com assistência de IA.'
-  },
-  {
-    icon: <SpeedIcon fontSize="medium" />,
-    title: 'Respostas Rápidas',
-    description: 'Acesse informações jurídicas instantaneamente.'
-  },
-  {
-    icon: <SecurityIcon fontSize="medium" />,
-    title: 'Informações Confiáveis',
-    description: 'Conteúdo baseado na legislação e jurisprudência atual.'
-  },
-];
+import LockIcon from '@mui/icons-material/Lock';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 const HomePage: React.FC = () => {
+  const theme = useTheme();
+
   return (
-    <Box>
-      {/* Hero Section */}
-      <Paper 
-        sx={{ 
-          py: 8, 
-          px: 2,
-          backgroundColor: 'primary.main',
-          color: 'white',
-          borderRadius: 0,
-          position: 'relative',
-          overflow: 'hidden'
+    <Box 
+      sx={{ 
+        minHeight: '100vh',
+        background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Background Elements */}
+      <Box
+        sx={{
+          position: 'absolute',
+          width: '40vw',
+          height: '40vw',
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.3)} 0%, ${alpha(theme.palette.secondary.main, 0)} 70%)`,
+          top: '-10vw',
+          right: '-10vw',
+          zIndex: 0,
         }}
-      >
-        <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
-                Sua Parceira Jurídica Inteligente
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          width: '30vw',
+          height: '30vw',
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${alpha(theme.palette.primary.light, 0.2)} 0%, ${alpha(theme.palette.primary.light, 0)} 70%)`,
+          bottom: '-10vw',
+          left: '-5vw',
+          zIndex: 0,
+        }}
+      />
+
+      {/* Grid Lines */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: `
+            linear-gradient(to right, ${alpha('#fff', 0.05)} 1px, transparent 1px),
+            linear-gradient(to bottom, ${alpha('#fff', 0.05)} 1px, transparent 1px)
+          `,
+          backgroundSize: '80px 80px',
+          zIndex: 1,
+        }}
+      />
+
+      {/* Content */}
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2, py: 8, height: '100%' }}>
+        <Grid container spacing={4} sx={{ height: '100%' }} alignItems="center">
+          <Grid item xs={12} md={6}>
+            <Box textAlign={{ xs: 'center', md: 'left' }} mb={6}>
+              <Typography 
+                variant="h2" 
+                component="h1" 
+                sx={{ 
+                  color: '#fff', 
+                  fontWeight: 800,
+                  mb: 2,
+                  textShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  fontSize: { xs: '2.5rem', md: '3.5rem' }
+                }}
+              >
+                Jurídico <Box component="span" sx={{ color: theme.palette.secondary.main }}>Inteligente</Box>
               </Typography>
-              <Typography variant="h6" paragraph>
-                Assistente de IA especializado no sistema jurídico brasileiro para advogados que buscam eficiência e excelência.
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  color: alpha('#fff', 0.9), 
+                  mb: 4,
+                  fontWeight: 400,
+                  lineHeight: 1.5
+                }}
+              >
+                O poder da IA a serviço da advocacia brasileira
               </Typography>
-              <Box sx={{ mt: 4 }}>
+              
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  gap: 3, 
+                  flexWrap: 'wrap',
+                  justifyContent: { xs: 'center', md: 'flex-start' }
+                }}
+              >
                 <Button 
                   variant="contained" 
                   color="secondary" 
                   size="large"
                   component={RouterLink}
                   to="/register"
-                  sx={{ mr: 2, mb: { xs: 2, sm: 0 } }}
+                  startIcon={<PersonAddIcon />}
+                  sx={{ 
+                    py: 1.5,
+                    px: 4,
+                    fontSize: '1rem',
+                    boxShadow: `0 8px 20px ${alpha(theme.palette.secondary.main, 0.4)}`,
+                    '&:hover': {
+                      boxShadow: `0 10px 25px ${alpha(theme.palette.secondary.main, 0.5)}`,
+                      transform: 'translateY(-2px)'
+                    },
+                    transition: 'all 0.2s ease'
+                  }}
                 >
-                  Começar Agora
+                  Inscrever-se
                 </Button>
                 <Button 
                   variant="outlined" 
@@ -100,177 +133,55 @@ const HomePage: React.FC = () => {
                   size="large"
                   component={RouterLink}
                   to="/login"
+                  startIcon={<LockIcon />}
+                  sx={{ 
+                    py: 1.5,
+                    px: 4,
+                    fontSize: '1rem',
+                    borderColor: '#fff',
+                    color: '#fff',
+                    '&:hover': {
+                      borderColor: '#fff',
+                      backgroundColor: alpha('#fff', 0.1),
+                      transform: 'translateY(-2px)'
+                    },
+                    transition: 'all 0.2s ease'
+                  }}
                 >
-                  Fazer Login
+                  Login
                 </Button>
               </Box>
-            </Grid>
-            <Grid item xs={12} md={6}>
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Card sx={{ 
+              p: 0,
+              borderRadius: 4,
+              overflow: 'hidden',
+              position: 'relative',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              height: { xs: '300px', md: '450px' }
+            }}>
               <Box
                 component="img"
                 src="/assets/home/home.jpg"
                 alt="Ilustração da Parceira Jurídica"
                 sx={{
                   width: '100%',
-                  maxWidth: 500,
-                  height: 'auto',
-                  display: 'block',
-                  margin: '0 auto',
-                  filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
+                  height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: 'center',
                 }}
               />
-            </Grid>
-          </Grid>
-        </Container>
-      </Paper>
-
-      {/* Features Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Box textAlign="center" mb={6}>
-          <Typography variant="h4" component="h2" gutterBottom>
-            Recursos Poderosos para Profissionais do Direito
-          </Typography>
-          <Typography variant="subtitle1" color="text.secondary" sx={{ maxWidth: 700, mx: 'auto' }}>
-            Combine o conhecimento jurídico com inteligência artificial para potencializar seu trabalho.
-          </Typography>
-        </Box>
-
-        <Grid container spacing={4}>
-          {features.map((feature, index) => (
-            <Grid item xs={12} md={4} key={index}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1, textAlign: 'center' }}>
-                  <Box sx={{ mb: 2 }}>
-                    {feature.icon}
-                  </Box>
-                  <Typography gutterBottom variant="h5" component="h3">
-                    {feature.title}
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    {feature.description}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
-
-      {/* Benefits Section */}
-      <Box sx={{ bgcolor: 'background.paper', py: 8 }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Typography variant="h4" component="h2" gutterBottom>
-                Benefícios da Nossa Solução
-              </Typography>
-              <Typography variant="subtitle1" paragraph color="text.secondary">
-                A Advogada Parceira foi desenvolvida para otimizar seu fluxo de trabalho jurídico.
-              </Typography>
-              
-              <List>
-                {benefits.map((benefit, index) => (
-                  <ListItem key={index} alignItems="flex-start" sx={{ px: 0 }}>
-                    <ListItemIcon>
-                      {benefit.icon}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={benefit.title}
-                      secondary={benefit.description}
-                      primaryTypographyProps={{ fontWeight: 'bold' }}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Box 
-                sx={{ 
-                  p: 4, 
-                  borderRadius: 2, 
-                  bgcolor: 'primary.main', 
-                  color: 'white',
-                  textAlign: 'center'
-                }}
-              >
-                <Typography variant="h5" gutterBottom>
-                  Experimente Gratuitamente
-                </Typography>
-                <Typography paragraph>
-                  Registre-se hoje e ganhe créditos para testar todas as funcionalidades.
-                </Typography>
-                <Button 
-                  variant="contained" 
-                  color="secondary" 
-                  size="large"
-                  component={RouterLink}
-                  to="/register"
-                  sx={{ mt: 2 }}
-                >
-                  Criar Conta Grátis
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* Testimonials Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Typography variant="h4" component="h2" textAlign="center" gutterBottom>
-          O Que Dizem Nossos Usuários
-        </Typography>
-        <Divider sx={{ mb: 4 }} />
-        
-        <Grid container spacing={4}>
-          {/* Testimonial 1 */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="body1" paragraph>
-                  "A Advogada Parceira revolucionou minha prática jurídica. Economizo horas de pesquisa e redação, com resultados de alta qualidade."
-                </Typography>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Dra. Marina Silva
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Advogada, São Paulo
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          {/* Testimonial 2 */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="body1" paragraph>
-                  "Os modelos de petição e a pesquisa de jurisprudência me ajudam a fundamentar melhor meus casos. Ferramenta indispensável."
-                </Typography>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Dr. Carlos Mendes
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Advogado, Rio de Janeiro
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          {/* Testimonial 3 */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="body1" paragraph>
-                  "Como advogada iniciante, a plataforma tem sido minha mentora virtual. Me ajuda a criar documentos profissionais e aprender sobre diversas áreas."
-                </Typography>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Dra. Ana Costa
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Advogada, Belo Horizonte
-                </Typography>
-              </CardContent>
+              <Box sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                background: `linear-gradient(to bottom right, ${alpha(theme.palette.primary.main, 0.4)}, ${alpha(theme.palette.secondary.main, 0.3)})`,
+              }} />
             </Card>
           </Grid>
         </Grid>

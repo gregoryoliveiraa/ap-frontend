@@ -3,6 +3,7 @@ import { Box } from '@mui/material';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
+import CookieConsent from './CookieConsent';
 
 const Layout: React.FC = () => {
   const location = useLocation();
@@ -29,6 +30,7 @@ const Layout: React.FC = () => {
         <Outlet />
       </Box>
       {!hideFooter && <Footer />}
+      <CookieConsent />
     </Box>
   );
 };

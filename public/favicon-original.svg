@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo transparente -->
+  <rect width="48" height="48" rx="8" fill="none"/>
+  
+  <!-- A estilizado - ajustado para melhor corresponder à imagem de referência -->
+  <path d="M5 35C5 35 7 15 24 15C41 15 43 35 43 35" stroke="#E07750" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M12 25H36" stroke="#E07750" stroke-width="8" stroke-linecap="round"/>
+</svg>

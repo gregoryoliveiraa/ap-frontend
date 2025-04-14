@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import jwt_decode from 'jwt-decode';
 import api from '../services/api';
+import * as userService from '../services/userService';
 
 interface User {
   id: string;
@@ -19,6 +20,7 @@ interface User {
   oab?: string;
   created_at?: string;
   updated_at?: string;
+  role?: string;
 }
 
 interface UpdateUserData {
@@ -39,7 +41,12 @@ interface AuthContextType {
   loginWithGoogle: (token: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
-  updateUser: (userData: UpdateUserData) => Promise<void>;
+  updateUser: (userData: UpdateUserData) => Promise<User | null>;
+  uploadAvatar: (file: File) => Promise<void>;
+  deleteAvatar: () => Promise<void>;
+  refreshUserData: () => Promise<User | null>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  isAdmin: () => boolean;
 }
 
 interface RegisterData {
@@ -83,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (decoded.exp < currentTime) {
             // Token expired
             localStorage.removeItem('token');
+            localStorage.removeItem('userProfile');
             setUser(null);
             setLoading(false);
             return;
@@ -92,11 +100,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           
           // Get user data
-          const response = await api.get('users/me');
+          const response = await api.get('/users/me');
           setUser(response.data);
         } catch (err) {
           console.error('Error validating authentication:', err);
           localStorage.removeItem('token');
+          localStorage.removeItem('userProfile');
           setUser(null);
         }
       }
@@ -106,6 +115,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     checkAuth();
   }, []);
+  
+  // Função para atualizar os dados do usuário no contexto
+  const refreshUserData = async () => {
+    try {
+      const response = await api.get('/users/me');
+      setUser(prevUser => {
+        if (!prevUser) return response.data;
+        return { ...prevUser, ...response.data };
+      });
+      return response.data;
+    } catch (err) {
+      console.error('Error refreshing user data:', err);
+      return null;
+    }
+  };
   
   const login = async (email: string, password: string) => {
     try {
@@ -117,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       formData.append('username', email);
       formData.append('password', password);
       
-      const response = await api.post('auth/login', formData, {
+      const response = await api.post('/auth/login', formData, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         }
@@ -136,14 +160,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       try {
         // Get user data
-        const userResponse = await api.get('users/me');
+        const userResponse = await api.get('/users/me');
         console.log('User data response:', userResponse.data);
         
         if (!userResponse.data) {
           throw new Error('Dados do usuário não recebidos');
         }
         
-        setUser(userResponse.data);
+        // Recuperar dados persistidos do perfil do usuário
+        const userProfile = localStorage.getItem('userProfile');
+        const userAvatar = localStorage.getItem('userAvatar');
+        
+        let combinedUserData = { ...userResponse.data };
+        
+        // Adicionar dados do perfil salvo localmente, se existirem
+        if (userProfile) {
+          try {
+            const savedProfile = JSON.parse(userProfile);
+            combinedUserData = { 
+              ...combinedUserData, 
+              ...savedProfile,
+              // Manter o avatar local se existir
+              avatar: userAvatar || combinedUserData.avatar
+            };
+          } catch (e) {
+            console.error('Erro ao analisar perfil do usuário:', e);
+          }
+        }
+        
+        // Atualizar o estado do usuário com os dados combinados
+        setUser(combinedUserData);
         navigate('/dashboard');
       } catch (userErr: any) {
         console.error('Error fetching user data:', userErr);
@@ -186,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('Dados para registro:', JSON.stringify(requestData, null, 2));
       
-      const response = await api.post('auth/register', requestData);
+      const response = await api.post('/auth/register', requestData);
       
       console.log('Registro bem-sucedido:', response.status);
       
@@ -199,7 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginFormData.append('username', userData.email);
         loginFormData.append('password', userData.password);
         
-        const loginResponse = await api.post('auth/login', loginFormData, {
+        const loginResponse = await api.post('/auth/login', loginFormData, {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
           }
@@ -211,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
         
         // Get user data
-        const userResponse = await api.get('users/me');
+        const userResponse = await api.get('/users/me');
         setUser(userResponse.data);
         
         // Redirecionar para o dashboard
@@ -269,21 +315,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       setError(null);
       
-      // Here you would normally update the user data through API
-      // await api.put('users/me', userData);
+      console.log('AuthContext - Updating user with data:', userData);
       
-      // For now, just update the local state
-      if (user) {
-        setUser({
-          ...user,
-          ...userData,
-        });
-      }
+      // Usar o serviço para atualizar os dados do usuário
+      const updatedUser = await userService.updateUserProfile(userData);
       
-      return Promise.resolve();
+      console.log('AuthContext - Received updated user from API:', updatedUser);
+      
+      // Atualizar o estado do usuário, preservando os dados existentes
+      setUser(prevUser => {
+        if (!prevUser) return updatedUser;
+        const mergedUser = { ...prevUser, ...updatedUser };
+        console.log('AuthContext - Merged user state:', mergedUser);
+        return mergedUser;
+      });
+      
+      // Retornar o usuário atualizado para atualizar o formulário
+      return updatedUser;
     } catch (err: any) {
       console.error('Update user error:', err);
       setError(err.response?.data?.detail || 'Erro ao atualizar perfil. Tente novamente.');
+      return Promise.reject(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const uploadAvatar = async (file: File) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Usar o serviço para fazer upload do avatar
+      const updatedUser = await userService.uploadAvatar(file);
+      
+      // Atualizar o estado do usuário
+      setUser(updatedUser);
+      
+      return Promise.resolve();
+    } catch (err: any) {
+      console.error('Upload avatar error:', err);
+      setError(err.response?.data?.detail || 'Erro ao fazer upload da imagem. Tente novamente.');
+      return Promise.reject(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const deleteAvatar = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Usar o serviço para excluir o avatar
+      const updatedUser = await userService.deleteAvatar();
+      
+      // Atualizar o estado do usuário
+      setUser(updatedUser);
+      
+      return Promise.resolve();
+    } catch (err: any) {
+      console.error('Delete avatar error:', err);
+      setError(err.response?.data?.detail || 'Erro ao remover a imagem. Tente novamente.');
       return Promise.reject(err);
     } finally {
       setLoading(false);
@@ -296,7 +389,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(null);
       
       // Chamar o endpoint de login com Google no backend
-      const response = await api.post('auth/google', { token }, {
+      const response = await api.post('/auth/google', { token }, {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -309,7 +402,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       try {
         // Obter dados do usuário
-        const userResponse = await api.get('users/me');
+        const userResponse = await api.get('/users/me');
         setUser(userResponse.data);
         
         navigate('/dashboard');
@@ -332,6 +425,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
+  const updatePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Usar o serviço para atualizar a senha
+      await userService.updatePassword(currentPassword, newPassword);
+      
+      return Promise.resolve();
+    } catch (err: any) {
+      console.error('Update password error:', err);
+      
+      let errorMessage = 'Erro ao atualizar a senha.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'A senha atual está incorreta.';
+      } else if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      }
+      
+      setError(errorMessage);
+      return Promise.reject(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Verifica se o usuário atual é administrador
+  const isAdmin = () => {
+    if (!user) return false;
+    return user.role === 'admin' || user.plano === 'admin';
+  };
+  
   const value = {
     user,
     isAuthenticated: !!user,
@@ -343,6 +469,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     clearError,
     updateUser,
+    uploadAvatar,
+    deleteAvatar,
+    refreshUserData,
+    updatePassword,
+    isAdmin
   };
   
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
