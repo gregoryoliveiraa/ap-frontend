@@ -258,7 +258,7 @@ const StatusPage: React.FC = () => {
                     {incident.status === 'scheduled' && (
                       <Box sx={{ mt: 2 }}>
                         <Typography variant="body2">
-                          <strong>Agendado para:</strong> {incident.scheduled.toLocaleString()}
+                          <strong>Agendado para:</strong> {incident.scheduled instanceof Date ? incident.scheduled.toLocaleString() : new Date(incident.scheduled).toLocaleString()}
                         </Typography>
                         <Typography variant="body2">
                           <strong>Duração estimada:</strong> {incident.duration}
@@ -273,7 +273,7 @@ const StatusPage: React.FC = () => {
                       {incident.updates.map((update, updateIndex) => (
                         <Box key={updateIndex} sx={{ ml: 2, mt: 1 }}>
                           <Typography variant="caption" display="block" color="text.secondary">
-                            {update.timestamp.toLocaleString()}
+                            {update.timestamp instanceof Date ? update.timestamp.toLocaleString() : new Date(update.timestamp).toLocaleString()}
                           </Typography>
                           <Typography variant="body2">
                             {update.message}

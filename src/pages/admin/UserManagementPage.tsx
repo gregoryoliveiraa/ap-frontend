@@ -413,13 +413,15 @@ const UserManagementPage: React.FC = () => {
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Enviar notificação">
-                            <IconButton 
-                              size="small" 
-                              color="primary"
-                              disabled
-                            >
-                              <NotificationsIcon fontSize="small" />
-                            </IconButton>
+                            <span>
+                              <IconButton 
+                                size="small" 
+                                color="primary"
+                                disabled
+                              >
+                                <NotificationsIcon fontSize="small" />
+                              </IconButton>
+                            </span>
                           </Tooltip>
                         </TableCell>
                       </TableRow>
@@ -448,13 +450,13 @@ const UserManagementPage: React.FC = () => {
       <Dialog open={openCreditDialog} onClose={handleCloseCreditDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           Gerenciar Créditos
+        </DialogTitle>
+        <DialogContent>
           {selectedUser && (
-            <Typography variant="subtitle2" color="text.secondary">
+            <Typography variant="subtitle1" gutterBottom color="text.primary" sx={{ mb: 2 }}>
               {selectedUser.nome_completo} ({selectedUser.email})
             </Typography>
           )}
-        </DialogTitle>
-        <DialogContent>
           <Box sx={{ my: 2 }}>
             <Alert severity="info" sx={{ mb: 2 }}>
               {selectedUser && (
@@ -505,13 +507,13 @@ const UserManagementPage: React.FC = () => {
       <Dialog open={openUserDialog} onClose={handleCloseUserDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           Editar Usuário
+        </DialogTitle>
+        <DialogContent>
           {selectedUser && (
-            <Typography variant="subtitle2" color="text.secondary">
+            <Typography variant="caption" display="block" gutterBottom color="text.secondary">
               ID: {selectedUser.id}
             </Typography>
           )}
-        </DialogTitle>
-        <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <TextField
@@ -544,6 +546,7 @@ const UserManagementPage: React.FC = () => {
                 <MenuItem value="basic">Basic</MenuItem>
                 <MenuItem value="pro">Pro</MenuItem>
                 <MenuItem value="enterprise">Enterprise</MenuItem>
+                {editableFields.plano === 'admin' && <MenuItem value="admin">Admin</MenuItem>}
               </TextField>
             </Grid>
             <Grid item xs={12} sm={6}>

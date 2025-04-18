@@ -82,7 +82,7 @@ const AdminDashboardPage: React.FC = () => {
         setLoading(true);
         setError(null);
         const data = await adminService.getSystemStats();
-        setStats(data);
+        setStats({ ...data, recentActions: data.recentActions || [] });
       } catch (err) {
         console.error('Erro ao buscar estatísticas:', err);
         setError('Não foi possível carregar as estatísticas do sistema');
@@ -195,7 +195,7 @@ const AdminDashboardPage: React.FC = () => {
                 </Typography>
               </Box>
               <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {data.totalTokens.toLocaleString()}
+                {data && data.totalTokens ? data.totalTokens.toLocaleString() : '...'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Desde o início da plataforma
@@ -288,7 +288,7 @@ const AdminDashboardPage: React.FC = () => {
                     dataKey="value"
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   >
-                    {data.usersPerPlan.map((entry: UserPlan, index: number) => (
+                    {(data?.usersPerPlan ?? []).map((entry: UserPlan, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -316,24 +316,30 @@ const AdminDashboardPage: React.FC = () => {
             </Box>
             <Divider sx={{ mb: 2 }} />
             <List>
-              {data.recentActions.map((action: RecentAction) => (
-                <ListItem key={action.id} alignItems="flex-start" sx={{ px: 1 }}>
-                  <ListItemIcon>
-                    <AccessTimeIcon color="action" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={action.action}
-                    secondary={
-                      <>
-                        <Typography component="span" variant="body2" color="text.primary">
-                          {action.user}
-                        </Typography>
-                        {` — ${action.time}`}
-                      </>
-                    }
-                  />
+              {(data?.recentActions ?? []).length > 0 ? (
+                (data?.recentActions ?? []).map((action: RecentAction) => (
+                  <ListItem key={action.id} alignItems="flex-start" sx={{ px: 1 }}>
+                    <ListItemIcon>
+                      <AccessTimeIcon color="action" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={action.action}
+                      secondary={
+                        <>
+                          <Typography component="span" variant="body2" color="text.primary">
+                            {action.user}
+                          </Typography>
+                          {` — ${action.time}`}
+                        </>
+                      }
+                    />
+                  </ListItem>
+                ))
+              ) : (
+                <ListItem sx={{ px: 1 }}>
+                  <ListItemText primary="Nenhuma atividade recente encontrada." />
                 </ListItem>
-              ))}
+              )}
             </List>
           </Paper>
         </Grid>

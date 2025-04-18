@@ -129,7 +129,8 @@ const NotificationManagementPage: React.FC = () => {
     message: '',
     type: 'info',
     target_all: true,
-    expiry_date: ''
+    expiry_date: '',
+    scheduled_at: ''
   });
   
   // Validação de campos
@@ -198,7 +199,8 @@ const NotificationManagementPage: React.FC = () => {
         message: '',
         type: 'info',
         target_all: true,
-        expiry_date: ''
+        expiry_date: '',
+        scheduled_at: ''
       });
     }
     setFormErrors({ title: false, message: false });
@@ -485,6 +487,30 @@ const NotificationManagementPage: React.FC = () => {
                 helperText="URL para direcionar o usuário (opcional)"
               />
             </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Data de Agendamento (opcional)"
+                type="datetime-local"
+                fullWidth
+                value={newNotification.scheduled_at || ''}
+                onChange={(e) => handleNotificationChange('scheduled_at', e.target.value || null)}
+                variant="outlined"
+                InputLabelProps={{ shrink: true }}
+                helperText="Se preenchido, a notificação só será visível após esta data/hora"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Data de Expiração (opcional)"
+                type="datetime-local"
+                fullWidth
+                value={newNotification.expiry_date || ''}
+                onChange={(e) => handleNotificationChange('expiry_date', e.target.value || null)}
+                variant="outlined"
+                InputLabelProps={{ shrink: true }}
+                helperText="Após esta data, a notificação não será mais exibida"
+              />
+            </Grid>
             <Grid item xs={12}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel id="notification-target-label">Público Alvo</InputLabel>
@@ -535,19 +561,6 @@ const NotificationManagementPage: React.FC = () => {
                 </FormControl>
               </Grid>
             )}
-            
-            <Grid item xs={12}>
-              <TextField
-                label="Data de Expiração (opcional)"
-                type="datetime-local"
-                fullWidth
-                value={newNotification.expiry_date || ''}
-                onChange={(e) => handleNotificationChange('expiry_date', e.target.value)}
-                variant="outlined"
-                InputLabelProps={{ shrink: true }}
-                helperText="Após esta data, a notificação não será mais exibida"
-              />
-            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>

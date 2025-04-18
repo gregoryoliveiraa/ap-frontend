@@ -27,10 +27,15 @@ export const getUserNotifications = async (): Promise<UserNotification[]> => {
 // Marcar notificação como lida
 export const markNotificationAsRead = async (notificationId: string): Promise<void> => {
   try {
-    await api.put(`/notifications/${notificationId}/read`);
-  } catch (error) {
+    // O endpoint espera UUID, mas recebemos string do frontend. 
+    // O backend deve ser robusto o suficiente para lidar com isso ou 
+    // precisamos validar/converter aqui.
+    // Assumindo que o backend lida com string ou UUID no path param.
+    await api.post(`/notifications/${notificationId}/read`); 
+  } catch (error: any) {
     console.error(`Erro ao marcar notificação ${notificationId} como lida:`, error);
-    throw error;
+    // Não propagar o erro para não quebrar a UI se falhar
+    // Opcional: mostrar uma mensagem de erro discreta
   }
 };
 

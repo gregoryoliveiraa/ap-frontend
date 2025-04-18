@@ -20,6 +20,7 @@ export interface NotificationData {
   target_role?: string; // Enviar para todos os usuários com essa role
   target_all?: boolean; // Enviar para todos os usuários
   expiry_date?: string; // Data de expiração da notificação
+  scheduled_at?: string; // Adicionado: Data de agendamento da notificação
   created_at?: string;
   read?: boolean;
   action_link?: string; // Link opcional para ação

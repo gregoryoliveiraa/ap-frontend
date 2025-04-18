@@ -16,7 +16,11 @@ import {
   useTheme,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -36,6 +40,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
+import { NotificationData } from '../services/adminService';
 
 const Header: React.FC = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -56,6 +61,9 @@ const Header: React.FC = () => {
   const isMobileMenuOpen = Boolean(mobileMenuAnchorEl);
   const isProfileMenuOpen = Boolean(profileMenuAnchorEl);
   const isNotificationsMenuOpen = Boolean(notificationsAnchorEl);
+
+  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
+  const [selectedNotificationContent, setSelectedNotificationContent] = useState<NotificationData | null>(null);
 
   const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setMobileMenuAnchorEl(event.currentTarget);
@@ -102,7 +110,9 @@ const Header: React.FC = () => {
       if (notification && notification.action_link) {
         handleNotificationsClose();
         navigate(notification.action_link);
-        markAsRead(id);
+        if (!notification.read) {
+           markAsRead(id); 
+        }
       }
     }
   };
@@ -407,48 +417,66 @@ const Header: React.FC = () => {
               <React.Fragment key={notification.id}>
                 <ListItem 
                   alignItems="flex-start"
-                  sx={{ 
-                    px: 2, 
-                    py: 1,
-                    bgcolor: notification.read ? 'transparent' : 'rgba(25, 118, 210, 0.05)',
-                    '&:hover': {
-                      bgcolor: 'rgba(0, 0, 0, 0.04)',
-                      cursor: notification.action_link ? 'pointer' : 'default'
+                  onClick={() => {
+                    handleNotificationsClose(); 
+                    
+                    if (notification.action_link) {
+                         handleNotificationAction(notification.id, 'navigate');
+                    } else {
+                        setSelectedNotificationContent(notification); 
+                        setNotificationDialogOpen(true);
+                        if (!notification.read) {
+                             handleNotificationAction(notification.id, 'read');
+                        }
                     }
                   }}
-                  onClick={() => notification.action_link && handleNotificationAction(notification.id, 'navigate')}
+                  sx={{ 
+                    px: 2, 
+                    py: 1.5,
+                    bgcolor: notification.read ? 'transparent' : 'action.hover',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: 'action.selected',
+                    }
+                  }}
                 >
                   <ListItemText
                     primary={
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography 
-                          variant="subtitle2" 
+                          variant="body1"
                           component="span" 
-                          fontWeight={notification.read ? 'normal' : 'bold'}
+                          fontWeight={notification.read ? 400 : 600}
                         >
                           {notification.title}
                         </Typography>
-                        <Box>
+                        <Box sx={{ ml: 1 }}> 
                           {!notification.read && (
+                            <Tooltip title="Marcar como lida">
+                              <IconButton 
+                                size="small" 
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  handleNotificationAction(notification.id, 'read');
+                                }}
+                                sx={{ p: 0.5 }}
+                              >
+                                <MarkEmailReadIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <Tooltip title="Excluir">
                             <IconButton 
                               size="small" 
                               onClick={(e) => { 
-                                e.stopPropagation(); 
-                                handleNotificationAction(notification.id, 'read');
+                                e.stopPropagation();
+                                handleNotificationAction(notification.id, 'delete');
                               }}
+                               sx={{ p: 0.5, ml: 0.5 }}
                             >
-                              <MarkEmailReadIcon fontSize="small" />
+                              <DeleteIcon fontSize="small" />
                             </IconButton>
-                          )}
-                          <IconButton 
-                            size="small" 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              handleNotificationAction(notification.id, 'delete');
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
+                          </Tooltip>
                         </Box>
                       </Box>
                     }
@@ -456,24 +484,32 @@ const Header: React.FC = () => {
                       <>
                         <Typography
                           variant="body2"
-                          color="text.primary"
-                          component="span"
+                          color={notification.read ? "text.secondary" : "text.primary"}
+                          component="div" 
+                          sx={{ 
+                            mt: 0.5, 
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2, 
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
                         >
-                          {notification.message}
+                          {notification.message} 
                         </Typography>
                         <Typography
                           variant="caption"
                           color="text.secondary"
                           component="div"
-                          sx={{ mt: 0.5 }}
+                          sx={{ mt: 0.5, textAlign: 'right' }}
                         >
-                          {new Date(notification.created_at).toLocaleString()}
+                          {notification.created_at ? new Date(notification.created_at).toLocaleString() : ''}
                         </Typography>
                       </>
                     }
                   />
                 </ListItem>
-                <Divider component="li" />
+                <Divider variant="inset" component="li" />
               </React.Fragment>
             ))}
           </List>
@@ -512,6 +548,25 @@ const Header: React.FC = () => {
           </MenuItem>
         ))}
       </Menu>
+
+      {/* Dialog para ler notificação */}
+      <Dialog open={notificationDialogOpen} onClose={() => setNotificationDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>{selectedNotificationContent?.title}</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}> 
+            {selectedNotificationContent?.message}
+          </Typography>
+          {selectedNotificationContent?.created_at && (
+             <Typography variant="caption" display="block" sx={{ mt: 2, textAlign: 'right' }} color="text.secondary">
+               Recebido em: {new Date(selectedNotificationContent.created_at).toLocaleString()}
+             </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNotificationDialogOpen(false)}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
+
     </AppBar>
   );
 };
