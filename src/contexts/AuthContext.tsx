@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import jwt_decode from 'jwt-decode';
 import api from '../services/api';
 import * as userService from '../services/userService';
+import { decodeJWT } from '../utils/tokenUtils';
 
 interface User {
   id: string;
@@ -76,20 +76,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   
+  // Token key from environment variables - support both Vite and CRA
+  const TOKEN_KEY = import.meta.env?.VITE_TOKEN_KEY || process.env.REACT_APP_TOKEN_KEY || 'ap_auth_token';
+  
   // Check if token exists and is valid on initial load
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem(TOKEN_KEY);
       
       if (token) {
         try {
           // Check if token is expired
-          const decoded = jwt_decode<TokenData>(token);
+          const tokenData = decodeJWT<TokenData>(token);
+          
+          if (!tokenData) {
+            // Invalid token
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem('userProfile');
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+          
           const currentTime = Date.now() / 1000;
           
-          if (decoded.exp < currentTime) {
+          if (tokenData.exp < currentTime) {
             // Token expired
-            localStorage.removeItem('token');
+            localStorage.removeItem(TOKEN_KEY);
             localStorage.removeItem('userProfile');
             setUser(null);
             setLoading(false);
@@ -104,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(response.data);
         } catch (err) {
           console.error('Error validating authentication:', err);
-          localStorage.removeItem('token');
+          localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem('userProfile');
           setUser(null);
         }
@@ -155,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const { access_token } = response.data;
       
-      localStorage.setItem('token', access_token);
+      localStorage.setItem(TOKEN_KEY, access_token);
       api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
       try {
@@ -195,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error fetching user data:', userErr);
         const errorMessage = userErr.response?.data?.detail || 'Erro ao obter dados do usuário';
         setError(errorMessage);
-        localStorage.removeItem('token');
+        localStorage.removeItem(TOKEN_KEY);
         api.defaults.headers.common['Authorization'] = '';
       }
     } catch (err: any) {
@@ -253,7 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const { access_token } = loginResponse.data;
         
-        localStorage.setItem('token', access_token);
+        localStorage.setItem(TOKEN_KEY, access_token);
         api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
         
         // Get user data
@@ -300,7 +313,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
   
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem(TOKEN_KEY);
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
     navigate('/login');
@@ -397,7 +410,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const { access_token } = response.data;
       
-      localStorage.setItem('token', access_token);
+      localStorage.setItem(TOKEN_KEY, access_token);
       api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
       try {
@@ -412,7 +425,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ? 'Erro ao obter dados do usuário'
           : userErr.response?.data?.detail || 'Erro ao obter dados do usuário';
         setError(errorMessage);
-        localStorage.removeItem('token');
+        localStorage.removeItem(TOKEN_KEY);
       }
     } catch (err: any) {
       console.error('Erro no login com Google:', err);
