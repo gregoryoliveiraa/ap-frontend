@@ -35,15 +35,12 @@ if ! command -v pm2 &> /dev/null; then
 fi
 
 # Check if repository exists
-if [ ! -d "ap-frontend-repo" ]; then
-    echo -e "${YELLOW}Cloning the repository...${NC}"
-    git clone https://github.com/gregoryoliveiraa/ap-frontend.git ap-frontend-repo
-    cd ap-frontend-repo
-else
-    echo -e "${YELLOW}Updating the repository...${NC}"
-    cd ap-frontend-repo
-    git pull origin main
+if [ ! -d "." ]; then
+    echo -e "${RED}Current directory not found. Aborting...${NC}"
+    exit 1
 fi
+
+echo -e "${YELLOW}Building in current directory...${NC}"
 
 # Install dependencies
 echo -e "${YELLOW}Installing dependencies...${NC}"
