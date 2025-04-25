@@ -1,26 +1,44 @@
 import axios from 'axios';
 
+// Get environment variables
+const API_URL = import.meta.env?.VITE_API_URL || process.env.REACT_APP_API_URL || '/api/v1';
+const TOKEN_KEY = import.meta.env?.VITE_TOKEN_KEY || process.env.REACT_APP_TOKEN_KEY || 'ap_auth_token';
+
+// Ensure HTTPS protocol is used
+let baseURL = API_URL;
+if (baseURL && baseURL.startsWith('http:')) {
+  baseURL = baseURL.replace('http:', 'https:');
+}
+
+// Create API instance
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || '/api/v1',
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add a request interceptor to log headers
+// Add a request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Log request headers for debugging
-    console.log('Request headers:', config.headers);
-    console.log('Request URL:', `${config.baseURL || ''}${config.url || ''}`);
+    // Log request details in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Request headers:', config.headers);
+      console.log('Request URL:', `${config.baseURL || ''}${config.url || ''}`);
+    }
     
-    // Se for um FormData, remover o Content-Type para que o Axios defina automaticamente
+    // Force HTTPS for all requests
+    if (config.url && config.url.startsWith('http:')) {
+      config.url = config.url.replace('http:', 'https:');
+    }
+    
+    // Handle FormData - remove Content-Type to let Axios set it automatically
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
     }
     
-    // Adicionar token de autenticação se disponível
-    const token = localStorage.getItem('token');
+    // Add authentication token if available
+    const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -57,7 +75,7 @@ api.interceptors.response.use(
       if (!window.location.pathname.includes('/login') && 
           !window.location.pathname.includes('/register') &&
           !window.location.pathname.includes('/reset-password')) {
-        localStorage.removeItem('token');
+        localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem('user');
         window.location.href = '/login';
       }
