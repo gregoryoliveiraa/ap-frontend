@@ -16,11 +16,7 @@ import {
   useTheme,
   List,
   ListItem,
-  ListItemText,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  ListItemText
 } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -40,7 +36,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
-import { NotificationData } from '../services/adminService';
 
 const Header: React.FC = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -61,9 +56,6 @@ const Header: React.FC = () => {
   const isMobileMenuOpen = Boolean(mobileMenuAnchorEl);
   const isProfileMenuOpen = Boolean(profileMenuAnchorEl);
   const isNotificationsMenuOpen = Boolean(notificationsAnchorEl);
-
-  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
-  const [selectedNotificationContent, setSelectedNotificationContent] = useState<NotificationData | null>(null);
 
   const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setMobileMenuAnchorEl(event.currentTarget);
@@ -110,9 +102,7 @@ const Header: React.FC = () => {
       if (notification && notification.action_link) {
         handleNotificationsClose();
         navigate(notification.action_link);
-        if (!notification.read) {
-           markAsRead(id); 
-        }
+        markAsRead(id);
       }
     }
   };
@@ -156,7 +146,7 @@ const Header: React.FC = () => {
             <Box 
               component="img" 
               src="/logo.png" 
-              alt="Advogada Parceira" 
+              alt="Logo" 
               onError={(e) => { console.error("Error loading logo:", e); }}
               onLoad={() => { console.log("Logo loaded successfully"); }}
               sx={{ 
@@ -167,17 +157,6 @@ const Header: React.FC = () => {
                 borderRadius: '8px',
               }} 
             />
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 700,
-                color: '#FFFFFF',
-                textDecoration: 'none',
-                flexGrow: { xs: 1, md: 0 }
-              }}
-            >
-              Advogada Parceira
-            </Typography>
           </Box>
         </Box>
 
@@ -417,66 +396,48 @@ const Header: React.FC = () => {
               <React.Fragment key={notification.id}>
                 <ListItem 
                   alignItems="flex-start"
-                  onClick={() => {
-                    handleNotificationsClose(); 
-                    
-                    if (notification.action_link) {
-                         handleNotificationAction(notification.id, 'navigate');
-                    } else {
-                        setSelectedNotificationContent(notification); 
-                        setNotificationDialogOpen(true);
-                        if (!notification.read) {
-                             handleNotificationAction(notification.id, 'read');
-                        }
-                    }
-                  }}
                   sx={{ 
                     px: 2, 
-                    py: 1.5,
-                    bgcolor: notification.read ? 'transparent' : 'action.hover',
-                    cursor: 'pointer',
+                    py: 1,
+                    bgcolor: notification.read ? 'transparent' : 'rgba(25, 118, 210, 0.05)',
                     '&:hover': {
-                      bgcolor: 'action.selected',
+                      bgcolor: 'rgba(0, 0, 0, 0.04)',
+                      cursor: notification.action_link ? 'pointer' : 'default'
                     }
                   }}
+                  onClick={() => notification.action_link && handleNotificationAction(notification.id, 'navigate')}
                 >
                   <ListItemText
                     primary={
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography 
-                          variant="body1"
+                          variant="subtitle2" 
                           component="span" 
-                          fontWeight={notification.read ? 400 : 600}
+                          fontWeight={notification.read ? 'normal' : 'bold'}
                         >
                           {notification.title}
                         </Typography>
-                        <Box sx={{ ml: 1 }}> 
+                        <Box>
                           {!notification.read && (
-                            <Tooltip title="Marcar como lida">
-                              <IconButton 
-                                size="small" 
-                                onClick={(e) => { 
-                                  e.stopPropagation();
-                                  handleNotificationAction(notification.id, 'read');
-                                }}
-                                sx={{ p: 0.5 }}
-                              >
-                                <MarkEmailReadIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          <Tooltip title="Excluir">
                             <IconButton 
                               size="small" 
                               onClick={(e) => { 
-                                e.stopPropagation();
-                                handleNotificationAction(notification.id, 'delete');
+                                e.stopPropagation(); 
+                                handleNotificationAction(notification.id, 'read');
                               }}
-                               sx={{ p: 0.5, ml: 0.5 }}
                             >
-                              <DeleteIcon fontSize="small" />
+                              <MarkEmailReadIcon fontSize="small" />
                             </IconButton>
-                          </Tooltip>
+                          )}
+                          <IconButton 
+                            size="small" 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              handleNotificationAction(notification.id, 'delete');
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
                         </Box>
                       </Box>
                     }
@@ -484,32 +445,24 @@ const Header: React.FC = () => {
                       <>
                         <Typography
                           variant="body2"
-                          color={notification.read ? "text.secondary" : "text.primary"}
-                          component="div" 
-                          sx={{ 
-                            mt: 0.5, 
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2, 
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}
+                          color="text.primary"
+                          component="span"
                         >
-                          {notification.message} 
+                          {notification.message}
                         </Typography>
                         <Typography
                           variant="caption"
                           color="text.secondary"
                           component="div"
-                          sx={{ mt: 0.5, textAlign: 'right' }}
+                          sx={{ mt: 0.5 }}
                         >
-                          {notification.created_at ? new Date(notification.created_at).toLocaleString() : ''}
+                          {new Date(notification.created_at).toLocaleString()}
                         </Typography>
                       </>
                     }
                   />
                 </ListItem>
-                <Divider variant="inset" component="li" />
+                <Divider component="li" />
               </React.Fragment>
             ))}
           </List>
@@ -548,25 +501,6 @@ const Header: React.FC = () => {
           </MenuItem>
         ))}
       </Menu>
-
-      {/* Dialog para ler notificação */}
-      <Dialog open={notificationDialogOpen} onClose={() => setNotificationDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ pb: 1 }}>{selectedNotificationContent?.title}</DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}> 
-            {selectedNotificationContent?.message}
-          </Typography>
-          {selectedNotificationContent?.created_at && (
-             <Typography variant="caption" display="block" sx={{ mt: 2, textAlign: 'right' }} color="text.secondary">
-               Recebido em: {new Date(selectedNotificationContent.created_at).toLocaleString()}
-             </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNotificationDialogOpen(false)}>Fechar</Button>
-        </DialogActions>
-      </Dialog>
-
     </AppBar>
   );
 };
