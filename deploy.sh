@@ -9,6 +9,11 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Configurações
+SERVER="ubuntu@18.217.19.191"
+KEY_PATH="/Users/gregoryoliveira/AP/admin.pem"
+REMOTE_DIR="/home/ubuntu/ap-frontend-deploy"
+
 echo -e "${GREEN}=========================================${NC}"
 echo -e "${GREEN}    Advogada Parceira Frontend Deploy    ${NC}"
 echo -e "${GREEN}=========================================${NC}"
@@ -131,15 +136,16 @@ sudo systemctl reload nginx
 echo -e "${GREEN}Deploy completed successfully!${NC}"
 echo -e "${GREEN}Frontend is now available at: https://app.advogadaparceira.com.br${NC}"
 
-# Configurações
-SERVER="ubuntu@18.217.19.191"
-KEY_PATH="/Users/gregoryoliveira/AP/admin.pem"
-REMOTE_DIR="/home/ubuntu/ap-frontend-deploy"
-
 # Copy build files to server
 echo -e "${YELLOW}Copying build files to server...${NC}"
 ssh -i "$KEY_PATH" "$SERVER" "rm -rf $REMOTE_DIR/* && mkdir -p $REMOTE_DIR"
 scp -i "$KEY_PATH" -r build/* "$SERVER:$REMOTE_DIR/"
+
+# Configure and restart nginx on the server
+echo -e "${YELLOW}Configuring nginx on server...${NC}"
+ssh -i "$KEY_PATH" "$SERVER" "sudo cp -r $REMOTE_DIR/* /var/www/adp/ && \
+    sudo chown -R www-data:www-data /var/www/adp && \
+    sudo systemctl restart nginx"
 
 echo -e "${GREEN}Deploy completed successfully!${NC}"
 echo -e "${GREEN}Frontend is now available at: https://app.advogadaparceira.com.br${NC}" 
