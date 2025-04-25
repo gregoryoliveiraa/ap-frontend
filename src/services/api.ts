@@ -1,43 +1,28 @@
 import axios from 'axios';
 
-// Get environment variables
-const API_URL = import.meta.env?.VITE_API_URL || process.env.REACT_APP_API_URL || '/api/v1';
-const TOKEN_KEY = import.meta.env?.VITE_TOKEN_KEY || process.env.REACT_APP_TOKEN_KEY || 'ap_auth_token';
+const API_URL = process.env.REACT_APP_API_URL || '/api/v1';
+const TOKEN_KEY = process.env.REACT_APP_TOKEN_KEY || 'ap_auth_token';
 
-// Ensure HTTPS protocol is used
-let baseURL = API_URL;
-if (baseURL && baseURL.startsWith('http:')) {
-  baseURL = baseURL.replace('http:', 'https:');
-}
-
-// Create API instance
 const api = axios.create({
-  baseURL,
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add a request interceptor
+// Add a request interceptor to log headers
 api.interceptors.request.use(
   (config) => {
-    // Log request details in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Request headers:', config.headers);
-      console.log('Request URL:', `${config.baseURL || ''}${config.url || ''}`);
-    }
+    // Log request headers for debugging
+    console.log('Request headers:', config.headers);
+    console.log('Request URL:', `${config.baseURL || ''}${config.url || ''}`);
     
-    // Force HTTPS for all requests
-    if (config.url && config.url.startsWith('http:')) {
-      config.url = config.url.replace('http:', 'https:');
-    }
-    
-    // Handle FormData - remove Content-Type to let Axios set it automatically
+    // Se for um FormData, remover o Content-Type para que o Axios defina automaticamente
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
     }
     
-    // Add authentication token if available
+    // Adicionar token de autenticação se disponível
     const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

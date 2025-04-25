@@ -142,19 +142,24 @@ const Header: React.FC = () => {
             </IconButton>
           )}
           
-          <Typography 
-            variant="h6" 
-            component={RouterLink} 
-            to={isAuthenticated ? "/dashboard" : "/"} 
-            sx={{ 
-              flexGrow: 1, 
-              textDecoration: 'none', 
-              color: 'inherit',
-              fontWeight: 700 
-            }}
+          <Box
+            component={RouterLink}
+            to={user ? "/dashboard" : "/"}
+            sx={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}
           >
-            Advogada Parceira
-          </Typography>
+            <Box 
+              component="img" 
+              src="/logo.png" 
+              alt="Logo" 
+              sx={{ 
+                height: 45, 
+                width: 'auto',
+                mr: 2,
+                display: { xs: 'block', sm: 'block' },
+                borderRadius: '8px',
+              }} 
+            />
+          </Box>
 
           {!isMobile && isAuthenticated && (
             <Box sx={{ display: 'flex' }}>

@@ -54,7 +54,7 @@ if [ ! -f ".env.production" ]; then
     echo -e "${YELLOW}Creating production environment file...${NC}"
     cp .env.example .env.production
     # Now we edit the file to set production values
-    sed -i 's/REACT_APP_API_URL=.*/REACT_APP_API_URL=http:\/\/api.advogadaparceira.com.br\/api\/v1/' .env.production
+    sed -i 's/REACT_APP_API_URL=.*/REACT_APP_API_URL=https:\/\/api.advogadaparceira.com.br\/api\/v1/' .env.production
     sed -i 's/REACT_APP_ENV=.*/REACT_APP_ENV=production/' .env.production
     sed -i 's/REACT_APP_ENABLE_MOCK_DATA=.*/REACT_APP_ENABLE_MOCK_DATA=false/' .env.production
 fi
@@ -76,8 +76,19 @@ sudo tee /etc/nginx/sites-available/ap-frontend > /dev/null << 'EOF'
 server {
     listen 80;
     server_name app.advogadaparceira.com.br;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name app.advogadaparceira.com.br;
     
-    root /home/ubuntu/ap-frontend-repo/build;
+    ssl_certificate /etc/letsencrypt/live/app.advogadaparceira.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.advogadaparceira.com.br/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    
+    root /var/www/adp;
     index index.html;
     
     location / {
@@ -100,33 +111,128 @@ server {
 }
 EOF
 
-# Enable the site
-if [ ! -L /etc/nginx/sites-enabled/ap-frontend ]; then
-    echo -e "${YELLOW}Enabling the site...${NC}"
+# Enable the site if not already enabled
+if [ ! -f "/etc/nginx/sites-enabled/ap-frontend" ]; then
+    echo -e "${YELLOW}Enabling nginx site...${NC}"
     sudo ln -s /etc/nginx/sites-available/ap-frontend /etc/nginx/sites-enabled/
-    sudo rm -f /etc/nginx/sites-enabled/default
 fi
 
-# Set up a service to serve the frontend files
-echo -e "${YELLOW}Setting up a service to serve the frontend files...${NC}"
-PM2_PATH=$(which pm2)
-cd /home/ubuntu/ap-frontend-repo
-$PM2_PATH stop ap-frontend 2>/dev/null || true
-$PM2_PATH delete ap-frontend 2>/dev/null || true
+# Copy build files to the correct location
+echo -e "${YELLOW}Copying build files to production directory...${NC}"
+sudo rm -rf /var/www/adp/*
+sudo cp -r build/* /var/www/adp/
+sudo chown -R www-data:www-data /var/www/adp
 
-# Testing Nginx configuration
-echo -e "${YELLOW}Testing Nginx configuration...${NC}"
+# Test nginx configuration
+echo -e "${YELLOW}Testing nginx configuration...${NC}"
 sudo nginx -t
 
-# Restart Nginx
-echo -e "${YELLOW}Restarting Nginx...${NC}"
-sudo systemctl restart nginx
+# Reload nginx
+echo -e "${YELLOW}Reloading nginx...${NC}"
+sudo systemctl reload nginx
 
-# Setup PM2 to start on system reboot
-echo -e "${YELLOW}Setting up PM2 to start on system reboot...${NC}"
-$PM2_PATH startup
-sudo env PATH=$PATH:$HOME/.nvm/versions/node/$(node -v)/bin $PM2_PATH startup systemd -u ubuntu --hp /home/ubuntu
-$PM2_PATH save
+echo -e "${GREEN}Deploy completed successfully!${NC}"
+echo -e "${GREEN}Frontend is now available at: https://app.advogadaparceira.com.br${NC}"
 
-echo -e "${GREEN}Deployment completed successfully!${NC}"
-echo -e "${GREEN}The frontend is now available at: http://app.advogadaparceira.com.br${NC}" 
+# Cores para output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Configurações
+SERVER="ubuntu@18.217.19.191"
+KEY_PATH="/Users/gregoryoliveira/AP/admin.pem"
+REMOTE_DIR="/home/ubuntu/ap-frontend-deploy"
+LOCAL_BUILD_DIR="build"
+
+echo -e "${YELLOW}Iniciando processo de deploy otimizado...${NC}"
+
+# Verificar se o diretório de build existe
+if [ ! -d "$LOCAL_BUILD_DIR" ]; then
+  echo -e "${RED}Diretório de build não encontrado. Executando build...${NC}"
+  npm run build
+  if [ $? -ne 0 ]; then
+    echo -e "${RED}Falha ao construir o aplicativo. Abortando deploy.${NC}"
+    exit 1
+  fi
+fi
+
+# Criar diretório temporário para comparação
+TEMP_DIR=$(mktemp -d)
+echo -e "${YELLOW}Criando diretório temporário: $TEMP_DIR${NC}"
+
+# Baixar arquivos atuais do servidor para comparação
+echo -e "${YELLOW}Baixando arquivos atuais do servidor para comparação...${NC}"
+ssh -i "$KEY_PATH" "$SERVER" "mkdir -p $TEMP_DIR && tar -czf - -C $REMOTE_DIR ." | tar -xzf - -C "$TEMP_DIR"
+
+# Função para verificar se um arquivo foi modificado
+check_file_modified() {
+  local file=$1
+  local remote_file="$TEMP_DIR/$file"
+  
+  # Se o arquivo não existe no servidor, ele foi modificado
+  if [ ! -f "$remote_file" ]; then
+    return 0
+  fi
+  
+  # Comparar timestamps
+  local local_mtime=$(stat -f %m "$LOCAL_BUILD_DIR/$file" 2>/dev/null || stat -c %Y "$LOCAL_BUILD_DIR/$file")
+  local remote_mtime=$(stat -f %m "$remote_file" 2>/dev/null || stat -c %Y "$remote_file")
+  
+  if [ "$local_mtime" -gt "$remote_mtime" ]; then
+    return 0
+  fi
+  
+  # Comparar tamanhos
+  local local_size=$(stat -f %z "$LOCAL_BUILD_DIR/$file" 2>/dev/null || stat -c %s "$LOCAL_BUILD_DIR/$file")
+  local remote_size=$(stat -f %z "$remote_file" 2>/dev/null || stat -c %s "$remote_file")
+  
+  if [ "$local_size" -ne "$remote_size" ]; then
+    return 0
+  fi
+  
+  return 1
+}
+
+# Lista de arquivos modificados
+MODIFIED_FILES=()
+
+# Verificar cada arquivo no diretório de build
+echo -e "${YELLOW}Verificando arquivos modificados...${NC}"
+for file in $(find "$LOCAL_BUILD_DIR" -type f); do
+  relative_file=${file#$LOCAL_BUILD_DIR/}
+  if check_file_modified "$relative_file"; then
+    MODIFIED_FILES+=("$relative_file")
+    echo -e "${GREEN}Arquivo modificado: $relative_file${NC}"
+  fi
+done
+
+# Se não houver arquivos modificados, verificar se o .env foi modificado
+if [ ${#MODIFIED_FILES[@]} -eq 0 ]; then
+  echo -e "${YELLOW}Nenhum arquivo modificado encontrado.${NC}"
+  
+  # Verificar se o .env foi modificado
+  if check_file_modified ".env"; then
+    MODIFIED_FILES+=(".env")
+    echo -e "${GREEN}Arquivo .env modificado${NC}"
+  fi
+fi
+
+# Se houver arquivos modificados, fazer upload apenas deles
+if [ ${#MODIFIED_FILES[@]} -gt 0 ]; then
+  echo -e "${YELLOW}Fazendo upload de ${#MODIFIED_FILES[@]} arquivos modificados...${NC}"
+  
+  for file in "${MODIFIED_FILES[@]}"; do
+    echo -e "${YELLOW}Upload: $file${NC}"
+    scp -i "$KEY_PATH" "$LOCAL_BUILD_DIR/$file" "$SERVER:$REMOTE_DIR/$file"
+  done
+  
+  echo -e "${GREEN}Upload concluído com sucesso!${NC}"
+else
+  echo -e "${GREEN}Nenhum arquivo precisa ser atualizado.${NC}"
+fi
+
+# Limpar diretório temporário
+rm -rf "$TEMP_DIR"
+echo -e "${GREEN}Deploy otimizado concluído!${NC}" 

@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import jwt_decode from 'jwt-decode';
 import api from '../services/api';
 import * as userService from '../services/userService';
-import { decodeJWT } from '../utils/tokenUtils';
 
 interface User {
   id: string;
@@ -77,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   
   // Token key from environment variables - support both Vite and CRA
-  const TOKEN_KEY = import.meta.env?.VITE_TOKEN_KEY || process.env.REACT_APP_TOKEN_KEY || 'ap_auth_token';
+  const TOKEN_KEY = process.env.REACT_APP_TOKEN_KEY || 'ap_auth_token';
   
   // Check if token exists and is valid on initial load
   useEffect(() => {
@@ -87,20 +87,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (token) {
         try {
           // Check if token is expired
-          const tokenData = decodeJWT<TokenData>(token);
-          
-          if (!tokenData) {
-            // Invalid token
-            localStorage.removeItem(TOKEN_KEY);
-            localStorage.removeItem('userProfile');
-            setUser(null);
-            setLoading(false);
-            return;
-          }
-          
+          const decoded = jwt_decode<TokenData>(token);
           const currentTime = Date.now() / 1000;
           
-          if (tokenData.exp < currentTime) {
+          if (decoded.exp < currentTime) {
             // Token expired
             localStorage.removeItem(TOKEN_KEY);
             localStorage.removeItem('userProfile');
