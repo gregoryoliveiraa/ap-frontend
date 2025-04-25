@@ -61,80 +61,14 @@ if [ ! -f ".env.production" ]; then
     sed -i 's/REACT_APP_ENABLE_MOCK_DATA=.*/REACT_APP_ENABLE_MOCK_DATA=false/' .env.production
 fi
 
+# Copy favicon files to public directory
+echo -e "${YELLOW}Copying favicon files...${NC}"
+mkdir -p public/favicon_io
+cp -r src/assets/images/favicon_io/* public/favicon_io/
+
 # Build the production version
 echo -e "${YELLOW}Building production version...${NC}"
 npm run build
-
-# Ensure nginx is installed
-if ! command -v nginx &> /dev/null; then
-    echo -e "${YELLOW}Installing nginx...${NC}"
-    sudo apt-get update
-    sudo apt-get install -y nginx
-fi
-
-# Setup nginx configuration
-echo -e "${YELLOW}Setting up nginx configuration...${NC}"
-sudo tee /etc/nginx/sites-available/ap-frontend > /dev/null << 'EOF'
-server {
-    listen 80;
-    server_name app.advogadaparceira.com.br;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name app.advogadaparceira.com.br;
-    
-    ssl_certificate /etc/letsencrypt/live/app.advogadaparceira.com.br/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/app.advogadaparceira.com.br/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-    
-    root /var/www/adp;
-    index index.html;
-    
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-    
-    # Optional: Add caching headers for static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, max-age=31536000";
-    }
-    
-    # Optional: Limit request size
-    client_max_body_size 10M;
-    
-    # Optional: Security headers
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-}
-EOF
-
-# Enable the site if not already enabled
-if [ ! -f "/etc/nginx/sites-enabled/ap-frontend" ]; then
-    echo -e "${YELLOW}Enabling nginx site...${NC}"
-    sudo ln -s /etc/nginx/sites-available/ap-frontend /etc/nginx/sites-enabled/
-fi
-
-# Copy build files to the correct location
-echo -e "${YELLOW}Copying build files to production directory...${NC}"
-sudo rm -rf /var/www/adp/*
-sudo cp -r build/* /var/www/adp/
-sudo chown -R www-data:www-data /var/www/adp
-
-# Test nginx configuration
-echo -e "${YELLOW}Testing nginx configuration...${NC}"
-sudo nginx -t
-
-# Reload nginx
-echo -e "${YELLOW}Reloading nginx...${NC}"
-sudo systemctl reload nginx
-
-echo -e "${GREEN}Deploy completed successfully!${NC}"
-echo -e "${GREEN}Frontend is now available at: https://app.advogadaparceira.com.br${NC}"
 
 # Copy build files to server
 echo -e "${YELLOW}Copying build files to server...${NC}"
@@ -143,9 +77,7 @@ scp -i "$KEY_PATH" -r build/* "$SERVER:$REMOTE_DIR/"
 
 # Configure and restart nginx on the server
 echo -e "${YELLOW}Configuring nginx on server...${NC}"
-ssh -i "$KEY_PATH" "$SERVER" "sudo cp -r $REMOTE_DIR/* /var/www/adp/ && \
-    sudo chown -R www-data:www-data /var/www/adp && \
-    sudo systemctl restart nginx"
+ssh -i "$KEY_PATH" "$SERVER" "sudo systemctl restart nginx"
 
 echo -e "${GREEN}Deploy completed successfully!${NC}"
 echo -e "${GREEN}Frontend is now available at: https://app.advogadaparceira.com.br${NC}" 
