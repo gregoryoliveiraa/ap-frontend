@@ -94,6 +94,15 @@ const NewDocumentPage: React.FC = () => {
   // Ref para o observer do scroll infinito
   const observer = useRef<IntersectionObserver | null>(null);
   
+  // Novo estado para erros de validação
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  // Estado para controle de status do documento
+  const [documentStatus, setDocumentStatus] = useState<'draft' | 'final'>('draft');
+  
+  // Estado para metadados adicionais
+  const [metadata, setMetadata] = useState<Record<string, any>>({});
+  
   // Elemento de referência para o último item da lista
   const lastTemplateElementRef = useCallback((node: HTMLDivElement) => {
     if (loading) return;
@@ -346,15 +355,23 @@ const NewDocumentPage: React.FC = () => {
     
     try {
       setLoading(true);
+      setValidationErrors({});
       
-      // Se estamos gerando a partir de um template com o nome com underscores,
-      // vamos passar também um título formatado
       const formattedTitle = templateDetails?.name ? formatDocumentName(templateDetails.name) : undefined;
       
       const result = await documentService.generateDocument(
         selectedTemplate, 
         variables,
-        formattedTitle // Passar o título formatado para o backend
+        formattedTitle,
+        {
+          status: documentStatus,
+          metadata: {
+            ...metadata,
+            generated_from_template: true,
+            template_version: templateDetails?.version,
+            ai_assisted: !!aiSuggestions
+          }
+        }
       );
       
       setSnackbar({
@@ -367,13 +384,33 @@ const NewDocumentPage: React.FC = () => {
       setTimeout(() => {
         navigate(`/documents/${result.id}`);
       }, 1500);
-    } catch (err) {
-      console.error('Erro ao gerar documento:', err);
-      setSnackbar({
-        open: true,
-        message: 'Ocorreu um erro ao gerar o documento',
-        severity: 'error'
-      });
+    } catch (error) {
+      console.error('Erro ao gerar documento:', error);
+      
+      // Verificar se é um erro de validação
+      if (error instanceof Error && error.message.includes('Validação das variáveis falhou')) {
+        try {
+          const validationErrors = JSON.parse(error.message.split(': ')[1]);
+          setValidationErrors(validationErrors);
+          setSnackbar({
+            open: true,
+            message: 'Por favor, corrija os erros de validação nos campos',
+            severity: 'error'
+          });
+        } catch {
+          setSnackbar({
+            open: true,
+            message: 'Erro ao validar os campos do documento',
+            severity: 'error'
+          });
+        }
+      } else {
+        setSnackbar({
+          open: true,
+          message: 'Ocorreu um erro ao gerar o documento',
+          severity: 'error'
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -392,9 +429,8 @@ const NewDocumentPage: React.FC = () => {
     
     try {
       setLoadingPreview(true);
+      setValidationErrors({});
       
-      // Se estamos gerando a partir de um template com o nome com underscores,
-      // vamos passar também um título formatado
       const formattedTitle = templateDetails?.name ? formatDocumentName(templateDetails.name) : undefined;
       
       const result = await documentService.previewDocument(
@@ -405,13 +441,33 @@ const NewDocumentPage: React.FC = () => {
       
       setPreviewData(result);
       setPreviewOpen(true);
-    } catch (err) {
-      console.error('Erro ao gerar preview do documento:', err);
-      setSnackbar({
-        open: true,
-        message: 'Ocorreu um erro ao gerar o preview do documento',
-        severity: 'error'
-      });
+    } catch (error) {
+      console.error('Erro ao gerar preview do documento:', error);
+      
+      // Verificar se é um erro de validação
+      if (error instanceof Error && error.message.includes('Validação das variáveis falhou')) {
+        try {
+          const validationErrors = JSON.parse(error.message.split(': ')[1]);
+          setValidationErrors(validationErrors);
+          setSnackbar({
+            open: true,
+            message: 'Por favor, corrija os erros de validação nos campos',
+            severity: 'error'
+          });
+        } catch {
+          setSnackbar({
+            open: true,
+            message: 'Erro ao validar os campos do documento',
+            severity: 'error'
+          });
+        }
+      } else {
+        setSnackbar({
+          open: true,
+          message: 'Ocorreu um erro ao gerar o preview do documento',
+          severity: 'error'
+        });
+      }
     } finally {
       setLoadingPreview(false);
     }
@@ -591,94 +647,75 @@ const NewDocumentPage: React.FC = () => {
     
     return (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <IconButton 
-            onClick={() => setSelectedTemplate(null)} 
-            sx={{ mr: 2 }}
-            color="primary"
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h5">
-            {templateDetails.name}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h5" gutterBottom>
+            Preencher Variáveis
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Preencha os campos necessários para gerar o documento
           </Typography>
         </Box>
         
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          {templateDetails.categoria} {templateDetails.subcategoria && `/ ${templateDetails.subcategoria}`}
-        </Typography>
-        
-        <Grid container spacing={2} sx={{ mb: 4 }}>
+        <Grid container spacing={3}>
+          {templateDetails.variables.map((variable) => (
+            <Grid item xs={12} sm={6} key={variable}>
+              <TextField
+                fullWidth
+                label={formatDocumentName(variable)}
+                value={variables[variable] || ''}
+                onChange={(e) => {
+                  setVariables(prev => ({
+                    ...prev,
+                    [variable]: e.target.value
+                  }));
+                  // Limpar erro de validação ao editar
+                  if (validationErrors[variable]) {
+                    setValidationErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors[variable];
+                      return newErrors;
+                    });
+                  }
+                }}
+                error={!!validationErrors[variable]}
+                helperText={validationErrors[variable]}
+                required={templateDetails.validation_rules?.[variable]?.required}
+              />
+            </Grid>
+          ))}
+          
           <Grid item xs={12}>
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6" sx={{ flex: 1 }}>
-                    Preencher variáveis
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    startIcon={<AutoAwesomeIcon />}
-                    onClick={handleGenerateAiSuggestions}
-                    disabled={generatingAiSuggestions || !caseDescription.trim()}
-                    sx={{ ml: 2 }}
-                  >
-                    Gerar com IA
-                  </Button>
-                </Box>
-                
-                <TextField
-                  label="Descrição do caso (opcional)"
-                  fullWidth
-                  multiline
-                  rows={3}
-                  value={caseDescription}
-                  onChange={(e) => setCaseDescription(e.target.value)}
-                  placeholder="Descreva o caso para gerar sugestões automáticas de preenchimento..."
-                  sx={{ mb: 3 }}
-                />
-                
-                <Grid container spacing={2}>
-                  {templateDetails.variables.map(variable => (
-                    <Grid item xs={12} sm={6} key={variable}>
-                      <TextField
-                        label={variable}
-                        fullWidth
-                        value={variables[variable] || ''}
-                        onChange={(e) => handleVariableChange(variable, e.target.value)}
-                        margin="normal"
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </CardContent>
-            </Card>
+            <FormControl fullWidth>
+              <InputLabel id="document-status-label">Status do Documento</InputLabel>
+              <Select
+                labelId="document-status-label"
+                value={documentStatus}
+                label="Status do Documento"
+                onChange={(e) => setDocumentStatus(e.target.value as 'draft' | 'final')}
+              >
+                <MenuItem value="draft">Rascunho</MenuItem>
+                <MenuItem value="final">Final</MenuItem>
+              </Select>
+            </FormControl>
           </Grid>
           
-          <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Button
-              variant="outlined"
-              onClick={() => setSelectedTemplate(null)}
-            >
-              Voltar
-            </Button>
-            <Box>
+          {/* Botões de ação */}
+          <Grid item xs={12}>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
               <Button
                 variant="outlined"
                 onClick={handlePreviewDocument}
                 disabled={loading || loadingPreview}
-                sx={{ mr: 2 }}
               >
-                {loadingPreview ? <CircularProgress size={24} /> : 'Visualizar'}
+                Visualizar
               </Button>
               <Button
                 variant="contained"
                 onClick={handleGenerateDocument}
-                disabled={loading}
-                startIcon={<AssignmentIcon />}
+                disabled={loading || loadingPreview}
+                startIcon={loading ? <CircularProgress size={20} /> : null}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Gerar Documento'}
+                Gerar Documento
               </Button>
             </Box>
           </Grid>

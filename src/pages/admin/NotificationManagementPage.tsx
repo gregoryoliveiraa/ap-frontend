@@ -129,6 +129,8 @@ const NotificationManagementPage: React.FC = () => {
     message: '',
     type: 'info',
     target_all: true,
+    target_role: '',
+    target_users: [],
     expiry_date: '',
     scheduled_at: ''
   });
@@ -199,6 +201,8 @@ const NotificationManagementPage: React.FC = () => {
         message: '',
         type: 'info',
         target_all: true,
+        target_role: '',
+        target_users: [],
         expiry_date: '',
         scheduled_at: ''
       });
@@ -224,6 +228,12 @@ const NotificationManagementPage: React.FC = () => {
 
   // Atualizar campos da notificação
   const handleNotificationChange = (field: keyof NotificationData, value: any) => {
+    // Para datas, garantir que estão no formato correto
+    if (field === 'expiry_date' || field === 'scheduled_at') {
+      // Se for uma string vazia, definir como undefined para evitar erro na API
+      value = value ? value : undefined;
+    }
+    
     setNewNotification(prev => ({ ...prev, [field]: value }));
     
     // Limpar erro do campo quando o usuário digitar algo
@@ -237,7 +247,19 @@ const NotificationManagementPage: React.FC = () => {
     if (!validateForm()) return;
 
     try {
-      await sendNotification(newNotification);
+      // Garantir que os campos opcionais estejam no formato correto
+      const notificationToSend = {
+        ...newNotification
+      };
+      
+      // Se for direcionado a todos ou a uma role, limpar target_users
+      if (notificationToSend.target_all || notificationToSend.target_role) {
+        notificationToSend.target_users = [];
+      }
+      
+      console.log("Enviando notificação:", notificationToSend);
+      
+      await sendNotification(notificationToSend);
       
       handleCloseDialog();
       await loadNotifications();
@@ -251,7 +273,7 @@ const NotificationManagementPage: React.FC = () => {
       console.error(err);
       setSnackbar({
         open: true,
-        message: 'Erro ao enviar notificação.',
+        message: 'Erro ao enviar notificação. Verifique os dados e tente novamente.',
         severity: 'error'
       });
     }
@@ -487,30 +509,6 @@ const NotificationManagementPage: React.FC = () => {
                 helperText="URL para direcionar o usuário (opcional)"
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Data de Agendamento (opcional)"
-                type="datetime-local"
-                fullWidth
-                value={newNotification.scheduled_at || ''}
-                onChange={(e) => handleNotificationChange('scheduled_at', e.target.value || null)}
-                variant="outlined"
-                InputLabelProps={{ shrink: true }}
-                helperText="Se preenchido, a notificação só será visível após esta data/hora"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Data de Expiração (opcional)"
-                type="datetime-local"
-                fullWidth
-                value={newNotification.expiry_date || ''}
-                onChange={(e) => handleNotificationChange('expiry_date', e.target.value || null)}
-                variant="outlined"
-                InputLabelProps={{ shrink: true }}
-                helperText="Após esta data, a notificação não será mais exibida"
-              />
-            </Grid>
             <Grid item xs={12}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel id="notification-target-label">Público Alvo</InputLabel>
@@ -561,6 +559,19 @@ const NotificationManagementPage: React.FC = () => {
                 </FormControl>
               </Grid>
             )}
+            
+            <Grid item xs={12}>
+              <TextField
+                label="Data de Expiração (opcional)"
+                type="datetime-local"
+                fullWidth
+                value={newNotification.expiry_date || ''}
+                onChange={(e) => handleNotificationChange('expiry_date', e.target.value)}
+                variant="outlined"
+                InputLabelProps={{ shrink: true }}
+                helperText="Após esta data, a notificação não será mais exibida"
+              />
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>

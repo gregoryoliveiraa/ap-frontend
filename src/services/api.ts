@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || '/api/v1';
-const TOKEN_KEY = process.env.REACT_APP_TOKEN_KEY || 'ap_auth_token';
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+const TOKEN_KEY = import.meta.env.VITE_TOKEN_KEY || 'ap_auth_token';
 
 const api = axios.create({
   baseURL: API_URL,

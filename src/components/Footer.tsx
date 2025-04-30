@@ -28,10 +28,18 @@ const Footer: React.FC = () => {
               variant="body2" 
               sx={{ 
                 textAlign: { xs: 'center', sm: 'left' },
-                fontWeight: 'bold'
+                background: `linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.85) 100%)`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                textFillColor: 'transparent',
+                fontSize: '0.7rem',
+                letterSpacing: '0.01em',
+                lineHeight: 1.4
               }}
             >
-              © {currentYear} Advogada Parceira. Todos os direitos reservados.
+              © {currentYear} Advogada Parceira<br />
+              Todos os direitos reservados.
             </Typography>
           </Grid>
           

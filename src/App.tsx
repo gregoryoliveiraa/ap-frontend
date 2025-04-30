@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { theme } from './theme';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -59,65 +60,67 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Router>
-        <AuthProvider>
-          <NotificationProvider>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                {/* Public routes */}
-                <Route index element={<HomePage />} />
-                <Route path="login" element={<LoginPage />} />
-                <Route path="register" element={<RegisterPage />} />
-                <Route path="terms" element={<TermsPage />} />
-                <Route path="privacy" element={<PrivacyPage />} />
-                <Route path="cookies" element={<CookiesPage />} />
-                <Route path="reset-password" element={<ResetPasswordPage />} />
-                <Route path="keyboard-shortcuts" element={<KeyboardShortcutsPage />} />
-                <Route path="help" element={<HelpPage />} />
-                <Route path="help/articles" element={<ArticleListPage />} />
-                <Route path="help/article/:id" element={<ArticleDetailPage />} />
-                
-                {/* Protected routes */}
-                <Route path="/" element={<ProtectedRoute />}>
-                  <Route path="dashboard" element={<DashboardPage />} />
-                  <Route path="chat" element={<ChatPage />} />
-                  <Route
-                    path="chat/:sessionId?"
-                    element={
-                      <PrivateRoute>
-                        <ChatPage />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route path="documents" element={<DocumentsPage />} />
-                  <Route path="documents/new" element={<NewDocumentPage />} />
-                  <Route path="documents/:id" element={<DocumentEditorPage />} />
-                  <Route path="search" element={<SearchPage />} />
-                  <Route path="profile" element={<ProfilePage />} />
-                  <Route path="usage" element={<UsagePage />} />
-                  <Route path="status" element={<StatusPage />} />
-                  <Route path="checkout" element={<CheckoutPage />} />
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <AuthProvider>
+            <NotificationProvider>
+              <Routes>
+                <Route path="/" element={<Layout />}>
+                  {/* Public routes */}
+                  <Route index element={<HomePage />} />
+                  <Route path="login" element={<LoginPage />} />
+                  <Route path="register" element={<RegisterPage />} />
+                  <Route path="terms" element={<TermsPage />} />
+                  <Route path="privacy" element={<PrivacyPage />} />
+                  <Route path="cookies" element={<CookiesPage />} />
+                  <Route path="reset-password" element={<ResetPasswordPage />} />
+                  <Route path="keyboard-shortcuts" element={<KeyboardShortcutsPage />} />
+                  <Route path="help" element={<HelpPage />} />
+                  <Route path="help/articles" element={<ArticleListPage />} />
+                  <Route path="help/article/:id" element={<ArticleDetailPage />} />
                   
-                  {/* Admin routes */}
-                  <Route path="admin" element={<AdminRoute />}>
-                    <Route index element={<AdminDashboardPage />} />
-                    <Route path="users" element={<UserManagementPage />} />
-                    <Route path="notifications" element={<NotificationManagementPage />} />
-                    <Route path="credits" element={<CreditManagementPage />} />
+                  {/* Protected routes */}
+                  <Route path="/" element={<ProtectedRoute />}>
+                    <Route path="dashboard" element={<DashboardPage />} />
+                    <Route path="chat" element={<ChatPage />} />
+                    <Route
+                      path="chat/:sessionId?"
+                      element={
+                        <PrivateRoute>
+                          <ChatPage />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route path="documents" element={<DocumentsPage />} />
+                    <Route path="documents/new" element={<NewDocumentPage />} />
+                    <Route path="documents/:id" element={<DocumentEditorPage />} />
+                    <Route path="search" element={<SearchPage />} />
+                    <Route path="profile" element={<ProfilePage />} />
+                    <Route path="usage" element={<UsagePage />} />
+                    <Route path="status" element={<StatusPage />} />
+                    <Route path="checkout" element={<CheckoutPage />} />
+                    
+                    {/* Admin routes */}
+                    <Route path="admin" element={<AdminRoute />}>
+                      <Route index element={<AdminDashboardPage />} />
+                      <Route path="users" element={<UserManagementPage />} />
+                      <Route path="notifications" element={<NotificationManagementPage />} />
+                      <Route path="credits" element={<CreditManagementPage />} />
+                    </Route>
                   </Route>
+                  
+                  {/* Error routes */}
+                  <Route path="404" element={<NotFoundPage />} />
+                  <Route path="*" element={<Navigate to="/404" replace />} />
                 </Route>
-                
-                {/* Error routes */}
-                <Route path="404" element={<NotFoundPage />} />
-                <Route path="*" element={<Navigate to="/404" replace />} />
-              </Route>
-            </Routes>
-          </NotificationProvider>
-        </AuthProvider>
-      </Router>
-    </ThemeProvider>
+              </Routes>
+            </NotificationProvider>
+          </AuthProvider>
+        </Router>
+      </ThemeProvider>
+    </GoogleOAuthProvider>
   );
 }
 

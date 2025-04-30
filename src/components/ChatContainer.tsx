@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
-import { Chat } from './Chat';
+import { Chat } from './ChatComplete';
 import { ChatSession, getChatSession } from '../services/chatService';
 import { useSnackbar } from 'notistack';
 

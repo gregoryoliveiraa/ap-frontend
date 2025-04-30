@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Box, 
   Container, 
@@ -22,7 +22,19 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Alert
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  List,
+  Breadcrumbs,
+  Divider,
+  ListItemButton
 } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
@@ -31,6 +43,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SortIcon from '@mui/icons-material/Sort';
+import FolderIcon from '@mui/icons-material/Folder';
+import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
+import DescriptionIcon from '@mui/icons-material/Description';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDocumentName } from '../../utils/formatUtils';
 import * as documentService from '../../services/documentService';
@@ -43,6 +60,19 @@ interface Document {
   created_at: Date;
   updated_at: Date;
   content?: string;
+  folder_path?: string | null;
+}
+
+interface Folder {
+  id: string;
+  name: string;
+  parent_id: string | null;
+}
+
+interface ErrorState {
+  message: string;
+  code?: string;
+  severity: 'error' | 'warning' | 'info';
 }
 
 const DocumentsPage: React.FC = () => {
@@ -53,34 +83,124 @@ const DocumentsPage: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('updated_at');
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [error, setError] = useState<ErrorState | null>(null);
+  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
+  const [folderPath, setFolderPath] = useState<{id: string, name: string}[]>([]);
+  
+  // Dialog states
+  const [createFolderDialog, setCreateFolderDialog] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [movingDocument, setMovingDocument] = useState<Document | null>(null);
+  const [moveDocumentDialog, setMoveDocumentDialog] = useState(false);
+  const [targetFolder, setTargetFolder] = useState<string | null>(null);
+  const [deleteFolderDialog, setDeleteFolderDialog] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
 
-  // Fetch documents from API
+  // Fetch documents and folders from API
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch documents and folders in parallel
+      const [docs, foldersData] = await Promise.all([
+        documentService.getUserDocuments(),
+        documentService.getUserFolders()
+      ]);
+      
+      setDocuments(docs);
+      setFolders(foldersData);
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err);
+      
+      let errorState: ErrorState;
+      if (err instanceof documentService.DocumentServiceError) {
+        switch (err.code) {
+          case 'UNAUTHORIZED':
+            errorState = {
+              message: 'Sua sessão expirou. Por favor, faça login novamente.',
+              code: err.code,
+              severity: 'error'
+            };
+            // Optionally trigger a logout or redirect to login
+            break;
+          case 'FORBIDDEN':
+            errorState = {
+              message: 'Você não tem permissão para visualizar estes documentos.',
+              code: err.code,
+              severity: 'error'
+            };
+            break;
+          case 'NOT_FOUND':
+            errorState = {
+              message: 'Nenhum documento encontrado.',
+              code: err.code,
+              severity: 'info'
+            };
+            break;
+          case 'SERVER_ERROR':
+            errorState = {
+              message: 'O servidor encontrou um erro. Por favor, tente novamente mais tarde.',
+              code: err.code,
+              severity: 'error'
+            };
+            break;
+          default:
+            errorState = {
+              message: err.message,
+              code: err.code,
+              severity: 'error'
+            };
+        }
+      } else {
+        errorState = {
+          message: 'Ocorreu um erro inesperado ao carregar os documentos.',
+          severity: 'error'
+        };
+      }
+      
+      setError(errorState);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const docs = await documentService.getUserDocuments();
-        setDocuments(docs);
-      } catch (err) {
-        console.error('Erro ao carregar documentos:', err);
-        setError('Não foi possível carregar seus documentos. Por favor, tente novamente.');
-      } finally {
-        setLoading(false);
+    fetchData();
+  }, [fetchData]);
+
+  // Update folder path when currentFolder changes
+  useEffect(() => {
+    if (currentFolder === null) {
+      setFolderPath([]);
+      return;
+    }
+
+    const buildPath = (folderId: string): {id: string, name: string}[] => {
+      const folder = folders.find(f => f.id === folderId);
+      if (!folder) return [];
+      
+      if (folder.parent_id === null) {
+        return [{ id: folder.id, name: folder.name }];
+      } else {
+        return [...buildPath(folder.parent_id), { id: folder.id, name: folder.name }];
       }
     };
 
-    fetchDocuments();
-  }, []);
+    setFolderPath(buildPath(currentFolder));
+  }, [currentFolder, folders]);
 
-  // Filter and sort documents
-  const filteredDocuments = documents
-    .filter(doc => 
+  // Filter documents by current folder and search/category filters
+  const filteredItems = () => {
+    let filteredDocs = documents.filter(doc => 
+      (currentFolder === null ? (doc.folder_path === null || doc.folder_path === undefined || doc.folder_path === '') : doc.folder_path === currentFolder) &&
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (categoryFilter === 'all' || doc.document_type === categoryFilter)
-    )
-    .sort((a, b) => {
+    );
+    
+    // Sort documents
+    filteredDocs = filteredDocs.sort((a, b) => {
       switch(sortBy) {
         case 'title':
           return a.title.localeCompare(b.title);
@@ -91,18 +211,99 @@ const DocumentsPage: React.FC = () => {
           return b.updated_at.getTime() - a.updated_at.getTime();
       }
     });
+    
+    // Get subfolders in current folder
+    const subfolders = folders.filter(folder => folder.parent_id === currentFolder);
+    
+    return { documents: filteredDocs, folders: subfolders };
+  };
+
+  const { documents: displayedDocuments, folders: displayedFolders } = filteredItems();
 
   // Handle document deletion
-  const handleDelete = async (id: string) => {
+  const handleDeleteDocument = async (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este documento?')) {
       try {
-        // TODO: Implement delete API call when available
-        // await documentService.deleteDocument(id);
+        await documentService.deleteDocument(id);
         setDocuments(documents.filter(doc => doc.id !== id));
       } catch (err) {
         console.error('Erro ao excluir documento:', err);
-        setError('Não foi possível excluir o documento. Por favor, tente novamente.');
+        setError({ message: 'Não foi possível excluir o documento. Por favor, tente novamente.', severity: 'error' });
       }
+    }
+  };
+
+  // Handle create folder
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    
+    try {
+      const newFolder = await documentService.createFolder({
+        name: newFolderName,
+        parent_id: currentFolder
+      });
+      
+      setFolders([...folders, newFolder]);
+      setNewFolderName('');
+      setCreateFolderDialog(false);
+    } catch (err) {
+      console.error('Erro ao criar pasta:', err);
+      setError({ message: 'Não foi possível criar a pasta. Por favor, tente novamente.', severity: 'error' });
+    }
+  };
+
+  // Handle delete folder
+  const handleDeleteFolder = async () => {
+    if (!folderToDelete) return;
+    
+    try {
+      await documentService.deleteFolder(folderToDelete.id);
+      setFolders(folders.filter(f => f.id !== folderToDelete.id));
+      setDeleteFolderDialog(false);
+      setFolderToDelete(null);
+    } catch (err) {
+      console.error('Erro ao excluir pasta:', err);
+      setError({ message: 'Não foi possível excluir a pasta. Por favor, tente novamente.', severity: 'error' });
+    }
+  };
+
+  // Handle move document
+  const handleMoveDocument = async () => {
+    if (!movingDocument) return;
+    
+    try {
+      const updatedDoc = await documentService.moveDocument(
+        movingDocument.id, 
+        targetFolder
+      );
+      
+      // Update document in list
+      setDocuments(documents.map(doc => 
+        doc.id === updatedDoc.id ? updatedDoc : doc
+      ));
+      
+      setMoveDocumentDialog(false);
+      setMovingDocument(null);
+      setTargetFolder(null);
+    } catch (err) {
+      console.error('Erro ao mover documento:', err);
+      setError({ message: 'Não foi possível mover o documento. Por favor, tente novamente.', severity: 'error' });
+    }
+  };
+
+  // Navigate to folder
+  const handleFolderClick = (folder: Folder) => {
+    setCurrentFolder(folder.id);
+  };
+
+  // Navigate back
+  const handleNavigateBack = () => {
+    if (folderPath.length > 1) {
+      // Go to parent folder
+      setCurrentFolder(folderPath[folderPath.length - 2].id);
+    } else {
+      // Go to root
+      setCurrentFolder(null);
     }
   };
 
@@ -117,21 +318,78 @@ const DocumentsPage: React.FC = () => {
             Meus Documentos
           </Typography>
           
-          <Button 
-            variant="contained" 
-            startIcon={<AddIcon />}
-            component={RouterLink}
-            to="/documents/new"
-          >
-            Novo Documento
-          </Button>
+          <Box>
+            <Button 
+              variant="outlined" 
+              startIcon={<CreateNewFolderIcon />}
+              onClick={() => setCreateFolderDialog(true)}
+              sx={{ mr: 2 }}
+              disabled={loading}
+            >
+              Nova Pasta
+            </Button>
+            <Button 
+              variant="contained" 
+              startIcon={<AddIcon />}
+              component={RouterLink}
+              to="/documents/new"
+              disabled={loading}
+            >
+              Novo Documento
+            </Button>
+          </Box>
         </Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
+          <Alert 
+            severity={error.severity} 
+            sx={{ mb: 3 }}
+            action={
+              error.code === 'SERVER_ERROR' && (
+                <Button color="inherit" size="small" onClick={fetchData}>
+                  Tentar Novamente
+                </Button>
+              )
+            }
+          >
+            {error.message}
           </Alert>
         )}
+
+        {/* Folder navigation */}
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Breadcrumbs separator="›" aria-label="breadcrumb" sx={{ mb: 2 }}>
+            <Button 
+              component="button"
+              onClick={() => setCurrentFolder(null)}
+              sx={{ textTransform: 'none' }}
+              startIcon={<FolderIcon />}
+            >
+              Raiz
+            </Button>
+            {folderPath.map((folder, index) => (
+              <Button
+                key={folder.id}
+                component="button"
+                onClick={() => setCurrentFolder(folder.id)}
+                sx={{ textTransform: 'none' }}
+                disabled={index === folderPath.length - 1}
+              >
+                {folder.name}
+              </Button>
+            ))}
+          </Breadcrumbs>
+          
+          {currentFolder && (
+            <Button 
+              startIcon={<ArrowBackIcon />}
+              onClick={handleNavigateBack}
+              sx={{ mb: 2 }}
+            >
+              Voltar
+            </Button>
+          )}
+        </Paper>
 
         {/* Filters and Search */}
         <Paper sx={{ p: 2, mb: 3 }}>
@@ -203,6 +461,42 @@ const DocumentsPage: React.FC = () => {
           </Grid>
         </Paper>
 
+        {/* Folders list */}
+        {displayedFolders.length > 0 && (
+          <Paper sx={{ mb: 3, p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Pastas
+            </Typography>
+            <List>
+              {displayedFolders.map((folder) => (
+                <ListItem
+                  key={folder.id}
+                  disablePadding
+                  secondaryAction={
+                    <IconButton 
+                      edge="end" 
+                      aria-label="delete"
+                      onClick={() => {
+                        setFolderToDelete(folder);
+                        setDeleteFolderDialog(true);
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  }
+                >
+                  <ListItemButton onClick={() => handleFolderClick(folder)}>
+                    <ListItemIcon>
+                      <FolderIcon />
+                    </ListItemIcon>
+                    <ListItemText primary={folder.name} />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        )}
+
         {/* Document table */}
         <Paper>
           <TableContainer>
@@ -223,7 +517,7 @@ const DocumentsPage: React.FC = () => {
                       <CircularProgress />
                     </TableCell>
                   </TableRow>
-                ) : filteredDocuments.length === 0 ? (
+                ) : displayedDocuments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                       <Typography variant="body1" color="text.secondary">
@@ -232,7 +526,7 @@ const DocumentsPage: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredDocuments.map((doc) => (
+                  displayedDocuments.map((doc) => (
                     <TableRow key={doc.id} hover>
                       <TableCell>
                         <Typography
@@ -267,6 +561,17 @@ const DocumentsPage: React.FC = () => {
                         {doc.updated_at.toLocaleDateString('pt-BR')}
                       </TableCell>
                       <TableCell align="right">
+                        <Tooltip title="Mover">
+                          <IconButton 
+                            size="small"
+                            onClick={() => {
+                              setMovingDocument(doc);
+                              setMoveDocumentDialog(true);
+                            }}
+                          >
+                            <DriveFileMoveIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="Editar">
                           <IconButton 
                             size="small"
@@ -279,7 +584,7 @@ const DocumentsPage: React.FC = () => {
                           <IconButton 
                             size="small" 
                             color="error"
-                            onClick={() => handleDelete(doc.id)}
+                            onClick={() => handleDeleteDocument(doc.id)}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -292,7 +597,150 @@ const DocumentsPage: React.FC = () => {
             </Table>
           </TableContainer>
         </Paper>
+
+        {/* Loading state */}
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        )}
+
+        {/* Empty state */}
+        {!loading && !error && documents.length === 0 && folders.length === 0 && (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="h6" gutterBottom>
+              Nenhum documento encontrado
+            </Typography>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              Comece criando um novo documento ou pasta
+            </Typography>
+            <Box sx={{ mt: 2 }}>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                component={RouterLink}
+                to="/documents/new"
+                sx={{ mr: 2 }}
+              >
+                Criar Documento
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<CreateNewFolderIcon />}
+                onClick={() => setCreateFolderDialog(true)}
+              >
+                Criar Pasta
+              </Button>
+            </Box>
+          </Paper>
+        )}
       </Box>
+
+      {/* Create Folder Dialog */}
+      <Dialog 
+        open={createFolderDialog} 
+        onClose={() => setCreateFolderDialog(false)}
+      >
+        <DialogTitle>Nova Pasta</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Digite o nome da nova pasta:
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Nome da Pasta"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateFolderDialog(false)}>Cancelar</Button>
+          <Button onClick={handleCreateFolder} variant="contained">Criar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Folder Dialog */}
+      <Dialog
+        open={deleteFolderDialog}
+        onClose={() => setDeleteFolderDialog(false)}
+      >
+        <DialogTitle>Confirmar exclusão</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Tem certeza que deseja excluir a pasta "{folderToDelete?.name}"? Todos os documentos dentro desta pasta serão movidos para a raiz.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteFolderDialog(false)}>Cancelar</Button>
+          <Button onClick={handleDeleteFolder} color="error" variant="contained">
+            Excluir
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Move Document Dialog */}
+      <Dialog
+        open={moveDocumentDialog}
+        onClose={() => setMoveDocumentDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Mover Documento</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Selecione para onde deseja mover "{movingDocument?.title}":
+          </DialogContentText>
+          <Box sx={{ mt: 2 }}>
+            <List>
+              <ListItem 
+                button 
+                onClick={() => setTargetFolder(null)}
+                selected={targetFolder === null}
+              >
+                <ListItemIcon>
+                  <FolderIcon />
+                </ListItemIcon>
+                <ListItemText primary="Raiz" />
+              </ListItem>
+              <Divider />
+              {folders.map(folder => (
+                <ListItem 
+                  key={folder.id} 
+                  button
+                  onClick={() => setTargetFolder(folder.id)}
+                  selected={targetFolder === folder.id}
+                >
+                  <ListItemIcon>
+                    <FolderIcon />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={folder.name} 
+                    secondary={
+                      folder.parent_id ? 
+                        `Em: ${folders.find(f => f.id === folder.parent_id)?.name || 'Pasta'}` 
+                        : 'Na raiz'
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMoveDocumentDialog(false)}>Cancelar</Button>
+          <Button 
+            onClick={handleMoveDocument} 
+            variant="contained"
+            disabled={movingDocument?.folder_path === targetFolder}
+          >
+            Mover
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

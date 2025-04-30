@@ -7,115 +7,111 @@ import { styled } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import SendIcon from '@mui/icons-material/Send';
-import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import remarkGfm from 'remark-gfm';
-import { alpha } from '@mui/material/styles';
 
-// Styled components with fixed heights for proper scrolling
-const ChatContainer = styled(Box)(({ theme }) => ({
+// Contêiner com altura fixa
+const ChatWrapper = styled('div')({
+  maxHeight: '80vh',
   display: 'flex',
   flexDirection: 'column',
-  height: '80vh',
-  width: '100%',
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: theme.shape.borderRadius,
-  overflow: 'hidden'
-}));
-
-const MessagesContainer = styled(Box)({
-  flexGrow: 1,
-  overflow: 'auto',
   padding: '16px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
-  height: 'calc(80vh - 70px)'
+  position: 'relative',
+  margin: '10px',
+  marginBottom: '70px', // Espaço para o footer
+  overflow: 'hidden'
 });
 
-interface MessageBubbleProps {
-  theme?: any;
-  isUser: boolean;
-}
-
-const MessageBubble = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isUser'
-})<MessageBubbleProps>(({ theme, isUser }) => ({
-  padding: '12px 16px',
-  borderRadius: '8px',
-  maxWidth: '70%',
-  marginBottom: '8px',
-  wordBreak: 'break-word',
-  ...(isUser && {
-    backgroundColor: theme.palette.primary.main,
-    color: 'white',
-    alignSelf: 'flex-end',
-    borderBottomRightRadius: 0,
-  }),
-  ...(!isUser && {
-    backgroundColor: theme.palette.grey[100],
-    color: theme.palette.text.primary,
-    alignSelf: 'flex-start',
-    borderBottomLeftRadius: 0,
-  }),
-}));
-
-const InputContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  padding: '8px 16px',
-  borderTop: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.background.paper,
-  position: 'sticky',
-  bottom: 0,
-  height: '70px'
-}));
-
-// Sidebar simplificada
-const Sidebar = styled(Paper)({
-  width: '300px',
+// Área de mensagens com scroll
+const MessageArea = styled('div')({
+  height: '450px',
+  overflowY: 'scroll',
   padding: '16px',
-  marginRight: '16px',
-  height: '650px',
+  backgroundColor: '#f5f5f5',
+  borderRadius: '8px',
+  marginBottom: '16px',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+  flex: '1 1 auto'
+});
+
+// Balão de mensagem do usuário
+const UserMessage = styled('div')({
+  backgroundColor: '#2e7d32',
+  color: 'white',
+  padding: '12px 16px',
+  borderRadius: '12px',
+  marginBottom: '8px',
+  maxWidth: '75%',
+  alignSelf: 'flex-end',
+  marginLeft: 'auto'
+});
+
+// Balão de mensagem do assistente
+const AssistantMessage = styled('div')({
+  backgroundColor: 'white',
+  color: '#333',
+  padding: '12px 16px',
+  borderRadius: '12px',
+  marginBottom: '8px',
+  maxWidth: '75%',
+  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+});
+
+// Texto da mensagem com quebra de palavra
+const MessageText = styled('p')({
+  margin: 0,
+  wordBreak: 'break-word'
+});
+
+// Texto da mensagem do usuário (branco)
+const UserMessageText = styled('p')({
+  margin: 0,
+  wordBreak: 'break-word',
+  color: 'white'
+});
+
+// Informações da mensagem
+const MessageInfo = styled('div')({
+  display: 'flex',
+  justifyContent: 'space-between',
+  fontSize: '12px',
+  marginTop: '6px',
+  opacity: 0.8
+});
+
+// Área de entrada
+const InputArea = styled('div')({
+  display: 'flex',
+  gap: '8px',
+  padding: '12px',
+  backgroundColor: 'white',
+  borderRadius: '8px',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.12)'
+});
+
+// Barra lateral de histórico
+const SidebarArea = styled('div')({
+  width: '280px',
+  padding: '16px',
+  backgroundColor: 'white',
+  borderRadius: '8px',
+  height: '450px',
   overflowY: 'auto',
-  backgroundColor: '#ffffff',
+  marginRight: '16px',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.12)'
 });
 
 // Layout principal
-const ChatLayout = styled(Box)({
+const MainLayout = styled('div')({
   display: 'flex',
-  flex: 1,
-  height: 'calc(100% - 50px)',
+  height: 'calc(100% - 60px)',
 });
 
-// Conteúdo principal
-const MainContent = styled(Box)({
-  flex: 1,
-  display: 'flex',
-  flexDirection: 'column',
-});
-
-// Mensagem de boas-vindas
-const WelcomeMessage = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
-  textAlign: 'center',
-  marginBottom: theme.spacing(2),
-  backgroundColor: theme.palette.primary.main,
-  color: theme.palette.primary.contrastText,
-}));
-
-interface ChatProps {
-  sessionId?: string;
-}
-
-export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
+export const Chat: React.FC = () => {
   const { user } = useAuth();
-  const { sessionId: routeSessionId } = useParams<{ sessionId: string }>();
-  const activeSessionId = propSessionId || routeSessionId;
+  const { sessionId } = useParams<{ sessionId: string }>();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<ChatProvider>('openai');
   const [showArchived, setShowArchived] = useState(false);
@@ -129,10 +125,10 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
   }, [showArchived]);
 
   useEffect(() => {
-    if (activeSessionId) {
-      loadMessages();
+    if (sessionId) {
+      loadSession(sessionId);
     }
-  }, [activeSessionId]);
+  }, [sessionId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -157,7 +153,7 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
         role: msg.role
       })) || [];
       setMessages(convertedMessages);
-      setInput(convertedMessages[convertedMessages.length - 1]?.content || '');
+      setInputMessage(convertedMessages[convertedMessages.length - 1]?.content || '');
     } catch (error) {
       console.error('Error loading session:', error);
     }
@@ -167,7 +163,7 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
     try {
       const sessions = await getChatSessions();
       setSessions(sessions);
-      if (sessions.length > 0 && !currentSession && !activeSessionId) {
+      if (sessions.length > 0 && !currentSession && !sessionId) {
         setCurrentSession(sessions[0]);
       }
     } catch (error) {
@@ -200,7 +196,7 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
         role: msg.role
       })) || [];
       setMessages(convertedMessages);
-      setInput(convertedMessages[convertedMessages.length - 1]?.content || '');
+      setInputMessage(convertedMessages[convertedMessages.length - 1]?.content || '');
     } catch (error) {
       console.error('Error loading session:', error);
     }
@@ -229,11 +225,11 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
   };
 
   const handleSendMessage = async () => {
-    if (!input.trim() || !currentSession) return;
+    if (!inputMessage.trim() || !currentSession) return;
 
     const userMessage: Message = {
       id: '', // Will be set by the backend
-      content: input,
+      content: inputMessage,
       isUser: true,
       created_at: new Date(),
       session_id: currentSession.id,
@@ -241,12 +237,12 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    setInputMessage('');
     setIsLoading(true);
 
     try {
       const response = await sendMessage({
-        message: input,
+        message: inputMessage,
         session_id: currentSession.id,
         provider: selectedProvider
       });
@@ -272,11 +268,11 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
   };
 
   const handleStreamChat = async () => {
-    if (!input.trim() || !currentSession) return;
+    if (!inputMessage.trim() || !currentSession) return;
 
     const userMessage: Message = {
       id: '', // Will be set by the backend
-      content: input,
+      content: inputMessage,
       isUser: true,
       created_at: new Date(),
       session_id: currentSession.id,
@@ -284,7 +280,7 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    setInputMessage('');
     setIsLoading(true);
 
     try {
@@ -301,7 +297,7 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
 
       await streamChat(
         {
-          message: input,
+          message: inputMessage,
           session_id: currentSession.id,
           provider: selectedProvider
         },
@@ -324,63 +320,18 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
     }
   };
 
-  const loadMessages = async () => {
-    if (!activeSessionId) return;
-    
-    setIsLoading(true);
-    try {
-      const session = await getChatSession(activeSessionId);
-      setCurrentSession(session);
-      const convertedMessages = session.messages?.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        isUser: msg.role === 'user',
-        created_at: msg.created_at,
-        session_id: session.id,
-        tokens_used: msg.tokens_used,
-        provider: msg.provider,
-        role: msg.role
-      })) || [];
-      setMessages(convertedMessages);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-      setError('Error loading chat messages. Please try again later.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Custom renderer for code blocks
-  const MarkdownComponents = {
-    code({ node, inline, className, children, ...props }: any) {
-      const match = /language-(\w+)/.exec(className || '');
-      return !inline && match ? (
-        <SyntaxHighlighter
-          style={atomDark}
-          language={match[1]}
-          PreTag="div"
-          {...props}
-        >
-          {String(children).replace(/\n$/, '')}
-        </SyntaxHighlighter>
-      ) : (
-        <code className={className} {...props}>
-          {children}
-        </code>
-      );
-    }
-  };
-
   return (
-    <ChatContainer>
+    <ChatWrapper>
       {error && (
-        <Box sx={{ 
-          mb: 2, 
-          p: 2, 
-          bgcolor: 'error.main', 
-          color: 'error.contrastText',
-          borderRadius: 1
-        }}>
+        <Box 
+          sx={{ 
+            mb: 2, 
+            p: 2, 
+            bgcolor: 'error.main', 
+            color: 'white',
+            borderRadius: 1
+          }}
+        >
           <Typography>{error}</Typography>
         </Box>
       )}
@@ -392,13 +343,14 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
         </Button>
       </Box>
 
-      <ChatLayout>
-        <Sidebar>
+      <MainLayout>
+        <SidebarArea>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Histórico</Typography>
             <Button
               startIcon={<ArchiveIcon />}
               onClick={() => setShowArchived(!showArchived)}
+              size="small"
             >
               {showArchived ? 'Ativos' : 'Arquivados'}
             </Button>
@@ -423,6 +375,7 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
                       e.stopPropagation();
                       handleDeleteClick(session);
                     }}
+                    size="small"
                   >
                     <DeleteIcon />
                   </IconButton>
@@ -430,47 +383,77 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
               </ListItem>
             ))}
           </List>
-        </Sidebar>
+        </SidebarArea>
 
-        <MainContent>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {currentSession ? (
             <>
-              <MessagesContainer>
+              <MessageArea>
                 {messages.length === 0 && (
-                  <WelcomeMessage>
+                  <Paper
+                    sx={{
+                      p: 4,
+                      textAlign: 'center',
+                      mb: 2,
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                    }}
+                  >
                     <Typography variant="h5" gutterBottom>
                       Bem-vindo(a), {user?.email}!
                     </Typography>
                     <Typography variant="body1">
                       Como posso ajudar você hoje?
                     </Typography>
-                  </WelcomeMessage>
+                  </Paper>
                 )}
+                
                 {messages.map((message, index) => (
-                  <MessageBubble isUser={message.isUser} key={message.id || index}>
-                    {message.isUser ? (
-                      <Typography variant="body1" sx={{ color: 'white' }}>
-                        {message.content}
-                      </Typography>
-                    ) : (
-                      <ReactMarkdown 
-                        children={message.content} 
-                        remarkPlugins={[remarkGfm]}
-                        components={MarkdownComponents}
-                      />
-                    )}
-                  </MessageBubble>
+                  message.isUser ? (
+                    <UserMessage key={index}>
+                      <UserMessageText>{message.content}</UserMessageText>
+                      <MessageInfo>
+                        <span style={{ color: 'rgba(255,255,255,0.9)' }}>
+                          {new Date(message.created_at).toLocaleTimeString()}
+                        </span>
+                        {message.tokens_used && (
+                          <span style={{ color: 'rgba(255,255,255,0.9)' }}>
+                            Tokens: {message.tokens_used}
+                          </span>
+                        )}
+                        {message.provider && (
+                          <span style={{ color: 'rgba(255,255,255,0.9)' }}>
+                            {message.provider}
+                          </span>
+                        )}
+                      </MessageInfo>
+                    </UserMessage>
+                  ) : (
+                    <AssistantMessage key={index}>
+                      <MessageText>{message.content}</MessageText>
+                      <MessageInfo>
+                        <span>{new Date(message.created_at).toLocaleTimeString()}</span>
+                        {message.tokens_used && (
+                          <span>Tokens: {message.tokens_used}</span>
+                        )}
+                        {message.provider && (
+                          <span>{message.provider}</span>
+                        )}
+                      </MessageInfo>
+                    </AssistantMessage>
+                  )
                 ))}
                 <div ref={messagesEndRef} />
-              </MessagesContainer>
+              </MessageArea>
 
-              <InputContainer>
+              <InputArea>
                 <FormControl sx={{ minWidth: 120 }}>
                   <InputLabel>Provedor</InputLabel>
                   <Select
                     value={selectedProvider}
                     onChange={(e) => setSelectedProvider(e.target.value as ChatProvider)}
                     label="Provedor"
+                    size="small"
                   >
                     <MenuItem value="deepseek">DeepSeek</MenuItem>
                     <MenuItem value="claude">Claude</MenuItem>
@@ -481,19 +464,20 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
                   fullWidth
                   variant="outlined"
                   placeholder="Digite sua mensagem..."
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleStreamChat()}
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   disabled={isLoading}
+                  size="small"
                 />
                 <IconButton
                   color="primary"
-                  onClick={handleStreamChat}
-                  disabled={!input.trim() || isLoading}
+                  onClick={handleSendMessage}
+                  disabled={!inputMessage.trim() || isLoading}
                 >
                   {isLoading ? <CircularProgress size={24} /> : <SendIcon />}
                 </IconButton>
-              </InputContainer>
+              </InputArea>
             </>
           ) : (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -502,8 +486,8 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
               </Typography>
             </Box>
           )}
-        </MainContent>
-      </ChatLayout>
+        </Box>
+      </MainLayout>
 
       <Dialog
         open={deleteDialogOpen}
@@ -522,6 +506,6 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
           </Button>
         </DialogActions>
       </Dialog>
-    </ChatContainer>
+    </ChatWrapper>
   );
-};
+}; 

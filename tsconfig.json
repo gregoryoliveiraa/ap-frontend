@@ -19,12 +19,18 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "*": ["node_modules/*"],
+      "@/*": ["src/*"]
+    },
     "typeRoots": [
       "./node_modules/@types",
       "./src/types"
     ]
   },
   "include": [
-    "src"
+    "src",
+    "node_modules/react-refresh/runtime.js"
   ]
 } 

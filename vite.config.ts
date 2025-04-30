@@ -7,22 +7,41 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(process.cwd(), 'src'),
+      '@': path.resolve(__dirname, './src'),
+      stream: 'stream-browserify',
+      crypto: 'crypto-browserify',
+      http: 'stream-http',
+      https: 'https-browserify',
+      url: 'url',
+      util: 'util',
+      assert: 'assert',
     },
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
   },
   server: {
     port: 3000,
-    open: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
-      }
-    }
-  }
+        rewrite: (path) => path,
+      },
+    },
+  },
+  define: {
+    'process.env': process.env,
+    global: {},
+  },
+  build: {
+    rollupOptions: {
+      external: [],
+    },
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+    },
+  },
 }); 

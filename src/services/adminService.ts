@@ -20,10 +20,19 @@ export interface NotificationData {
   target_role?: string; // Enviar para todos os usuários com essa role
   target_all?: boolean; // Enviar para todos os usuários
   expiry_date?: string; // Data de expiração da notificação
-  scheduled_at?: string; // Adicionado: Data de agendamento da notificação
+  scheduled_at?: string; // Data de agendamento da notificação
   created_at?: string;
   read?: boolean;
   action_link?: string; // Link opcional para ação
+  is_active?: boolean; // Status da notificação
+  created_by?: string; // ID do usuário que criou a notificação
+  updated_at?: string; // Data da última atualização
+  read_by?: string[]; // Lista de IDs de usuários que leram a notificação
+  target_user_ids?: string[]; // IDs dos usuários alvo (alternativo para target_users)
+  target_roles?: string[]; // Lista de roles alvo (alternativo para target_role)
+  priority?: 'low' | 'medium' | 'high'; // Prioridade da notificação
+  category?: string; // Categoria da notificação
+  metadata?: Record<string, any>; // Dados adicionais em formato JSON
 }
 
 export interface CreditUpdateData {

@@ -92,7 +92,7 @@ const DocumentEditorPage: React.FC = () => {
       if (!isAutoSave) {
         setSnackbar({
           open: true,
-          message: 'Documento salvo com sucesso!',
+          message: 'Modelo salvo com sucesso!',
           severity: 'success'
         });
         
@@ -102,10 +102,10 @@ const DocumentEditorPage: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Erro ao salvar documento:', error);
+      console.error('Erro ao salvar modelo:', error);
       setSnackbar({
         open: true,
-        message: 'Erro ao salvar o documento. Por favor, tente novamente.',
+        message: 'Erro ao salvar o modelo. Por favor, tente novamente.',
         severity: 'error'
       });
     } finally {

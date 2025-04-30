@@ -117,15 +117,6 @@ const Header: React.FC = () => {
     { label: 'Meu Consumo', path: '/usage', icon: <DataUsageIcon /> },
   ];
   
-  // Adicionar opção de admin se o usuário for administrador
-  if (user && isAdmin()) {
-    navItems.push({ 
-      label: 'Administração', 
-      path: '/admin', 
-      icon: <AdminPanelSettingsIcon /> 
-    });
-  }
-
   return (
     <AppBar 
       position="sticky" 
@@ -146,7 +137,7 @@ const Header: React.FC = () => {
             <Box 
               component="img" 
               src="/logo.png" 
-              alt="Logo" 
+              alt="Advogada Parceira" 
               onError={(e) => { console.error("Error loading logo:", e); }}
               onLoad={() => { console.log("Logo loaded successfully"); }}
               sx={{ 
@@ -157,6 +148,16 @@ const Header: React.FC = () => {
                 borderRadius: '8px',
               }} 
             />
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 700,
+                color: '#FFFFFF',
+                textDecoration: 'none',
+                flexGrow: { xs: 1, md: 0 }
+              }}
+            >
+            </Typography>
           </Box>
         </Box>
 
@@ -333,21 +334,33 @@ const Header: React.FC = () => {
           Consumo
         </MenuItem>
         
-        {isAdmin && isAdmin() && (
-          <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/admin'); }}>
-            <ListItemIcon>
-              <AdminPanelSettingsIcon fontSize="small" />
-            </ListItemIcon>
-            Administração
-          </MenuItem>
-        )}
-        
         <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/profile?tab=settings'); }}>
           <ListItemIcon>
             <SettingsIcon fontSize="small" />
           </ListItemIcon>
           Configurações
         </MenuItem>
+        
+        {isAdmin && isAdmin() && (
+          <MenuItem 
+            onClick={() => { handleProfileMenuClose(); navigate('/admin'); }}
+            sx={{ 
+              bgcolor: theme.palette.secondary.main, 
+              color: 'white',
+              my: 1,
+              '&:hover': {
+                bgcolor: theme.palette.secondary.light
+              }
+            }}
+          >
+            <ListItemIcon>
+              <AdminPanelSettingsIcon fontSize="small" sx={{ color: 'white' }} />
+            </ListItemIcon>
+            <Typography fontWeight="bold">
+              Administração
+            </Typography>
+          </MenuItem>
+        )}
         
         <Divider />
         

@@ -10,73 +10,63 @@ import {
   CardContent,
   CardActions,
   Divider,
-  LinearProgress,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
   Avatar,
-  Chip,
   useTheme,
   alpha,
   CircularProgress,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import ChatIcon from '@mui/icons-material/Chat';
 import DescriptionIcon from '@mui/icons-material/Description';
 import SearchIcon from '@mui/icons-material/Search';
-import CreditCardIcon from '@mui/icons-material/CreditCard';
-import HistoryIcon from '@mui/icons-material/History';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import SettingsIcon from '@mui/icons-material/Settings';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatRelativeDate } from '../../utils/dateUtils';
-import * as usageService from '../../services/usageService';
 import * as chatService from '../../services/chatService';
 import * as documentService from '../../services/documentService';
 
 const DashboardPage: React.FC = () => {
-  const { user, refreshUserData } = useAuth();
   const theme = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, refreshUserData } = useAuth();
   const [chatSessions, setChatSessions] = useState<any[]>([]);
-  const [totalChatSessions, setTotalChatSessions] = useState<number>(0);
-  const [recentDocuments, setRecentDocuments] = useState<documentService.Document[]>([]);
-  const [usageData, setUsageData] = useState<usageService.UsageData | null>(null);
+  const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [welcomeMessage] = useState<string>("Olá");
+  const [suggestedPrompts] = useState<string[]>([
+    "Redigir petição inicial",
+    "Criar contrato",
+    "Analisar jurisprudência",
+    "Responder cliente",
+    "Contestação",
+    "Recurso"
+  ]);
   
-  // Função para buscar dados
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Apenas atualiza os dados do usuário na primeira carga
       if (user && !user.firstName && user.nome_completo) {
         await refreshUserData();
       }
       
-      // Fetch usage data for credits and tokens
-      const usage = await usageService.getUserUsage();
-      setUsageData(usage);
-      console.log('Dashboard usage data:', usage);
-      
-      // Fetch chat sessions
       const sessions = await chatService.getChatSessions();
-      setTotalChatSessions(sessions.length); // Armazena o número total de sessões
-      setChatSessions(sessions.slice(0, 3)); // Limit to 3 recent sessions
+      setChatSessions(sessions.slice(0, 3));
       
-      // Fetch document history
       try {
         const documents = await documentService.getUserDocuments();
-        console.log('Dashboard documents:', documents);
-        setRecentDocuments(documents.slice(0, 3)); // Limit to 3 recent documents
+        setRecentDocuments(documents.slice(0, 3));
       } catch (docError) {
         console.error('Error fetching documents:', docError);
-        // Don't set general error, just log the specific error
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -86,43 +76,21 @@ const DashboardPage: React.FC = () => {
     }
   }, [refreshUserData, user]);
   
-  // Manter referência da localização atual
   const history = React.useRef(location.pathname);
   
-  // Atualiza os dados apenas quando a localização muda para o dashboard
   useEffect(() => {
     const isDashboardPage = location.pathname === '/dashboard' || location.pathname === '/';
     const wasNotDashboardPage = location.key && location.pathname !== history.current;
     
     if (isDashboardPage && wasNotDashboardPage) {
-      console.log('Dashboard page active after navigation, fetching fresh data');
       fetchData();
       history.current = location.pathname;
     }
   }, [location.pathname, location.key, fetchData]);
   
-  // Fetch real data from API quando o componente é montado
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  
-  // Calculate credit usage percentage
-  const creditPercentage = () => {
-    const max = 100;
-    const available = usageData?.available_tokens || user?.creditos_disponiveis || 0;
-    return (available / max) * 100;
-  };
-  
-  // Get total tokens used
-  const totalTokensUsed = () => {
-    return usageData?.total_tokens || 0;
-  };
-  
-  // Get available tokens/credits
-  const availableTokens = () => {
-    return usageData?.available_tokens || user?.creditos_disponiveis || 0;
-  };
+  }, [fetchData]);
 
   if (loading) {
     return (
@@ -141,144 +109,165 @@ const DashboardPage: React.FC = () => {
           </Alert>
         )}
         
-        {/* Welcome Section */}
-        <Paper 
-          sx={{ 
-            p: 4, 
-            mb: 4, 
-            borderRadius: 3,
-            background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.light} 90%)`,
-            color: 'white',
-            boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.2)}`
-          }}
-        >
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between' }}>
-            <Box>
-              <Typography variant="h4" fontWeight="bold" gutterBottom color="white">
-                Bem-vindo(a), {user?.firstName || user?.nome_completo?.split(' ')[0] || 'Usuário'}!
+        <Box sx={{ 
+          mb: 4, 
+          borderRadius: 3,
+          bgcolor: 'transparent',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            bgcolor: '#f5f7fa',
+            zIndex: -1
+          }} />
+          <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '60%',
+            height: '100%',
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #f5f7fa 40%, transparent 100%)',
+            zIndex: -1
+          }} />
+          <Box sx={{
+            position: 'absolute',
+            bottom: 0,
+            right: 0,
+            width: '75%',
+            height: '100%',
+            background: 'linear-gradient(135deg, transparent 0%, #e8f0fe 40%, #e8f0fe 100%)',
+            zIndex: -1
+          }} />
+          
+          <Grid container spacing={0}>
+            <Grid item xs={12} md={8} sx={{ p: 4 }}>
+              <Box sx={{ mb: 3 }}>
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontWeight: 600,
+                    mb: 0.5,
+                    background: `linear-gradient(90deg, #2c3e50 0%, ${theme.palette.primary.main} 100%)`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    textFillColor: 'transparent'
+                  }}
+                >
+                  Olá {user?.firstName || user?.nome_completo?.split(' ')[0] || 'Usuário'}!
+                </Typography>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    color: theme.palette.text.secondary,
+                    fontWeight: 'medium'
+                  }}
+                >
+                  O que precisa hoje?
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                {suggestedPrompts.map((prompt, index) => (
+                  <Button 
+                    key={index}
+                    variant="outlined" 
+                    size="medium"
+                    onClick={() => navigate('/chat')}
+                    sx={{ 
+                      borderRadius: 8,
+                      px: 2,
+                      py: 1.2,
+                      color: theme.palette.text.primary,
+                      backgroundColor: 'white',
+                      borderColor: theme.palette.divider,
+                      textTransform: 'none',
+                      fontWeight: 'medium',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                        borderColor: theme.palette.primary.main,
+                      },
+                      mb: 1
+                    }}
+                    startIcon={
+                      index === 0 ? <DescriptionIcon color="primary" /> : 
+                      index === 1 ? <DescriptionIcon color="secondary" /> :
+                      index === 2 ? <SearchIcon color="primary" /> :
+                      index === 3 ? <ChatIcon color="secondary" /> :
+                      index === 4 ? <DescriptionIcon color="primary" /> :
+                      <DescriptionIcon color="secondary" />
+                    }
+                  >
+                    {prompt}
+                  </Button>
+                ))}
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} md={4} sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              justifyContent: 'center',
+              p: 4,
+              borderLeft: { md: `1px solid ${theme.palette.divider}` }
+            }}>
+              <Typography variant="subtitle1" fontWeight="medium" sx={{ mb: 2, color: theme.palette.text.secondary }}>
+                Acesso rápido
               </Typography>
-              <Typography variant="body1" color="white">
-                O que você gostaria de fazer hoje?
-              </Typography>
-            </Box>
-            <Box sx={{ mt: { xs: 2, md: 0 } }}>
+              
               <Button 
                 variant="contained" 
-                color="secondary"
-                startIcon={<SettingsIcon />}
-                component={RouterLink}
-                to="/profile"
+                size="large"
+                onClick={() => navigate('/chat')}
                 sx={{ 
-                  borderRadius: 2, 
-                  px: 3,
-                  color: '#fff',
-                  bgcolor: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(8px)',
+                  borderRadius: 2,
+                  py: 1.5,
+                  backgroundColor: theme.palette.primary.main,
+                  color: 'white',
+                  fontWeight: 'medium',
+                  textTransform: 'none',
+                  mb: 2,
+                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`,
                   '&:hover': {
-                    bgcolor: 'rgba(255, 255, 255, 0.3)',
+                    backgroundColor: theme.palette.primary.dark,
+                    boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.5)}`,
                   }
                 }}
+                startIcon={<ChatIcon />}
               >
-                Minha Conta
+                Novo chat
               </Button>
-            </Box>
-          </Box>
-        </Paper>
-
-        {/* Stats Section */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">Créditos Disponíveis</Typography>
-                  <Typography variant="h4" fontWeight="bold" color="primary" sx={{ my: 1 }}>
-                    {availableTokens()}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-                  <CreditCardIcon />
-                </Avatar>
-              </Box>
-              <Box sx={{ mt: 2 }}>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={creditPercentage()} 
-                  sx={{ 
-                    height: 8, 
-                    borderRadius: 4,
-                    mb: 1
-                  }} 
-                />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {availableTokens()}/100 créditos
-                  </Typography>
-                  <Button 
-                    size="small" 
-                    startIcon={<AddCircleOutlineIcon />}
-                    component={RouterLink}
-                    to="/usage"
-                  >
-                    Adicionar
-                  </Button>
-                </Box>
-              </Box>
-            </Paper>
+              
+              <Button 
+                variant="outlined" 
+                size="large"
+                component={RouterLink}
+                to="/documents/new"
+                sx={{ 
+                  borderRadius: 2,
+                  py: 1.5,
+                  color: theme.palette.text.primary,
+                  borderColor: theme.palette.divider,
+                  fontWeight: 'medium',
+                  textTransform: 'none',
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                    borderColor: theme.palette.primary.main,
+                  }
+                }}
+                startIcon={<DescriptionIcon />}
+              >
+                Novo modelo
+              </Button>
+            </Grid>
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">Conversas</Typography>
-                  <Typography variant="h4" fontWeight="bold" color="primary" sx={{ my: 1 }}>
-                    {totalChatSessions}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-                  <ChatIcon />
-                </Avatar>
-              </Box>
-              <Box sx={{ mt: 'auto' }}>
-                <Button 
-                  fullWidth 
-                  variant="outlined" 
-                  component={RouterLink} 
-                  to="/chat"
-                  endIcon={<ChatIcon />}
-                >
-                  Ver Todas
-                </Button>
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">Tokens Utilizados</Typography>
-                  <Typography variant="h4" fontWeight="bold" color="primary" sx={{ my: 1 }}>
-                    {totalTokensUsed()}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-                  <HistoryIcon />
-                </Avatar>
-              </Box>
-              <Box sx={{ mt: 'auto' }}>
-                <Button 
-                  fullWidth 
-                  variant="outlined" 
-                  component={RouterLink} 
-                  to="/usage"
-                  endIcon={<CreditCardIcon />}
-                >
-                  Ver Detalhes
-                </Button>
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
+        </Box>
 
         {/* Main Features Section */}
         <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: theme.palette.primary.dark }}>
@@ -305,7 +294,7 @@ const DashboardPage: React.FC = () => {
                 alignItems: 'center'
               }}>
                 <ChatIcon sx={{ fontSize: 32, mr: 1, color: 'white' }} />
-                <Typography variant="h6" fontWeight="bold" color="white">Assistente Jurídico</Typography>
+                <Typography variant="h6" fontWeight="bold" color="white">Assistente AI</Typography>
               </Box>
               <CardContent sx={{ flexGrow: 1 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -349,7 +338,7 @@ const DashboardPage: React.FC = () => {
                 alignItems: 'center'
               }}>
                 <DescriptionIcon sx={{ fontSize: 32, mr: 1, color: 'white' }} />
-                <Typography variant="h6" fontWeight="bold" color="white">Documentos</Typography>
+                <Typography variant="h6" fontWeight="bold" color="white">Modelos</Typography>
               </Box>
               <CardContent sx={{ flexGrow: 1 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -368,7 +357,7 @@ const DashboardPage: React.FC = () => {
                   to="/documents/new"
                   startIcon={<DescriptionIcon />}
                 >
-                  Criar Documento
+                  Criar Modelo
                 </Button>
               </CardActions>
             </Card>
@@ -503,7 +492,7 @@ const DashboardPage: React.FC = () => {
             <Paper sx={{ p: 3, borderRadius: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" fontWeight="bold">
-                  Documentos Recentes
+                  Modelos Recentes
                 </Typography>
                 <Button 
                   size="small" 
