@@ -13,7 +13,7 @@ const root = ReactDOM.createRoot(
 );
 
 // Verificar se o login com Google está desabilitado
-const isGoogleLoginDisabled = process.env.REACT_APP_DISABLE_GOOGLE_LOGIN === 'true';
+const isGoogleLoginDisabled = import.meta.env.VITE_DISABLE_GOOGLE_LOGIN === 'true';
 
 const AppWithProviders = () => (
   <ThemeProvider theme={theme}>
@@ -21,7 +21,7 @@ const AppWithProviders = () => (
     {isGoogleLoginDisabled ? (
       <App />
     ) : (
-      <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID || ''}>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
         <App />
       </GoogleOAuthProvider>
     )}

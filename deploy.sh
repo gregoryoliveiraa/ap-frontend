@@ -56,24 +56,28 @@ if [ ! -f ".env.production" ]; then
     echo -e "${YELLOW}Creating production environment file...${NC}"
     cp .env.example .env.production
     # Now we edit the file to set production values
-    sed -i 's/REACT_APP_API_URL=.*/REACT_APP_API_URL=https:\/\/api.advogadaparceira.com.br\/api\/v1/' .env.production
-    sed -i 's/REACT_APP_ENV=.*/REACT_APP_ENV=production/' .env.production
-    sed -i 's/REACT_APP_ENABLE_MOCK_DATA=.*/REACT_APP_ENABLE_MOCK_DATA=false/' .env.production
+    sed -i 's/VITE_API_URL=.*/VITE_API_URL=https:\/\/api.advogadaparceira.com.br\/api\/v1/' .env.production
+    sed -i 's/VITE_ENV=.*/VITE_ENV=production/' .env.production
+    sed -i 's/VITE_ENABLE_ANALYTICS=.*/VITE_ENABLE_ANALYTICS=true/' .env.production
+    sed -i 's/VITE_DISABLE_GOOGLE_LOGIN=.*/VITE_DISABLE_GOOGLE_LOGIN=false/' .env.production
 fi
-
-# Copy favicon files to public directory
-echo -e "${YELLOW}Copying favicon files...${NC}"
-mkdir -p public/favicon_io
-cp -r src/assets/images/favicon_io/* public/favicon_io/
 
 # Build the production version
 echo -e "${YELLOW}Building production version...${NC}"
 npm run build
 
+# Prepare deployment directory structure
+echo -e "${YELLOW}Preparing deployment directory structure...${NC}"
+mkdir -p dist/favicon_io
+cp -r src/assets/images/favicon_io/* dist/favicon_io/
+cp src/assets/images/favicon.* dist/
+cp src/assets/images/logo* dist/
+cp src/assets/images/manifest.json dist/
+
 # Copy build files to server
 echo -e "${YELLOW}Copying build files to server...${NC}"
 ssh -i "$KEY_PATH" "$SERVER" "rm -rf $REMOTE_DIR/* && mkdir -p $REMOTE_DIR"
-scp -i "$KEY_PATH" -r build/* "$SERVER:$REMOTE_DIR/"
+scp -i "$KEY_PATH" -r dist/* "$SERVER:$REMOTE_DIR/"
 
 # Configure and restart nginx on the server
 echo -e "${YELLOW}Configuring nginx on server...${NC}"
