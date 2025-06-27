@@ -39,6 +39,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   loginWithGoogle: (token: string) => Promise<void>;
+  loginWithFacebook: (token: string) => Promise<void>;
+  loginWithMicrosoft: (token: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   updateUser: (userData: UpdateUserData) => Promise<User | null>;
@@ -429,6 +431,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   };
+
+  const loginWithFacebook = async (token: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Chamar o endpoint de login com Facebook no backend
+      const response = await api.post('/auth/facebook', { token }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const { access_token } = response.data;
+      
+      localStorage.setItem('token', access_token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      
+      try {
+        // Obter dados do usuário
+        const userResponse = await api.get('/users/me');
+        setUser(userResponse.data);
+        
+        navigate('/dashboard');
+      } catch (userErr: any) {
+        console.error('Erro ao obter dados do usuário Facebook:', userErr);
+        const errorMessage = typeof userErr.response?.data?.detail === 'object'
+          ? 'Erro ao obter dados do usuário'
+          : userErr.response?.data?.detail || 'Erro ao obter dados do usuário';
+        setError(errorMessage);
+        localStorage.removeItem('token');
+      }
+    } catch (err: any) {
+      console.error('Erro no login com Facebook:', err);
+      const errorMessage = typeof err.response?.data?.detail === 'object'
+        ? 'Erro no login com Facebook. Tente novamente.'
+        : err.response?.data?.detail || 'Erro no login com Facebook. Tente novamente.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithMicrosoft = async (token: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Chamar o endpoint de login com Microsoft no backend
+      const response = await api.post('/auth/microsoft', { token }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const { access_token } = response.data;
+      
+      localStorage.setItem('token', access_token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      
+      try {
+        // Obter dados do usuário
+        const userResponse = await api.get('/users/me');
+        setUser(userResponse.data);
+        
+        navigate('/dashboard');
+      } catch (userErr: any) {
+        console.error('Erro ao obter dados do usuário Microsoft:', userErr);
+        const errorMessage = typeof userErr.response?.data?.detail === 'object'
+          ? 'Erro ao obter dados do usuário'
+          : userErr.response?.data?.detail || 'Erro ao obter dados do usuário';
+        setError(errorMessage);
+        localStorage.removeItem('token');
+      }
+    } catch (err: any) {
+      console.error('Erro no login com Microsoft:', err);
+      const errorMessage = typeof err.response?.data?.detail === 'object'
+        ? 'Erro no login com Microsoft. Tente novamente.'
+        : err.response?.data?.detail || 'Erro no login com Microsoft. Tente novamente.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const updatePassword = async (currentPassword: string, newPassword: string) => {
     try {
@@ -471,6 +557,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     register,
     loginWithGoogle,
+    loginWithFacebook,
+    loginWithMicrosoft,
     logout,
     clearError,
     updateUser,

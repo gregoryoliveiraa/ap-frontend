@@ -22,6 +22,9 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import GoogleIcon from '@mui/icons-material/Google';
 import { useGoogleLogin } from '@react-oauth/google';
+import { useMsal } from '@azure/msal-react';
+import FacebookIcon from '../../components/FacebookIcon';
+import MicrosoftIcon from '../../components/MicrosoftIcon';
 
 // Validation schema
 const validationSchema = yup.object({
@@ -35,9 +38,10 @@ const validationSchema = yup.object({
 });
 
 const LoginPage: React.FC = () => {
-  const { login, loginWithGoogle, error, loading, clearError } = useAuth();
+  const { login, loginWithGoogle, loginWithFacebook, loginWithMicrosoft, error, loading, clearError } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoginDisabled, setIsGoogleLoginDisabled] = useState(false);
+  const { instance } = useMsal();
 
   // Form handling with Formik
   const formik = useFormik({
@@ -70,6 +74,44 @@ const LoginPage: React.FC = () => {
       console.error('Erro na autenticação com Google:', error);
     }
   });
+
+  // Configuração do login com Facebook
+  const handleFacebookLogin = () => {
+    if (loading) return;
+    
+    // Usando Facebook SDK via window object
+    const FB = (window as any).FB;
+    if (FB) {
+      FB.login((response: any) => {
+        if (response.authResponse) {
+          loginWithFacebook(response.authResponse.accessToken);
+        } else {
+          console.error('Login do Facebook cancelado');
+        }
+      }, { scope: 'email' });
+    } else {
+      console.error('Facebook SDK não carregado');
+    }
+  };
+
+  // Configuração do login com Microsoft
+  const handleMicrosoftLogin = async () => {
+    if (loading) return;
+    
+    try {
+      const loginRequest = {
+        scopes: ['User.Read'],
+        prompt: 'select_account'
+      };
+      
+      const response = await instance.loginPopup(loginRequest);
+      if (response.accessToken) {
+        await loginWithMicrosoft(response.accessToken);
+      }
+    } catch (error) {
+      console.error('Erro no login com Microsoft:', error);
+    }
+  };
 
   return (
     <Container maxWidth="sm">
@@ -159,6 +201,30 @@ const LoginPage: React.FC = () => {
             disabled={loading}
           >
             Entrar com Google
+          </Button>
+
+          <Button
+            fullWidth
+            variant="outlined"
+            color="primary"
+            startIcon={<FacebookIcon />}
+            onClick={handleFacebookLogin}
+            sx={{ mb: 2 }}
+            disabled={loading}
+          >
+            Entrar com Facebook
+          </Button>
+
+          <Button
+            fullWidth
+            variant="outlined"
+            color="primary"
+            startIcon={<MicrosoftIcon />}
+            onClick={handleMicrosoftLogin}
+            sx={{ mb: 2 }}
+            disabled={loading}
+          >
+            Entrar com Microsoft
           </Button>
           
           <Box sx={{ mt: 2, textAlign: 'center' }}>

@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { PublicClientApplication } from '@azure/msal-browser';
+import { MsalProvider } from '@azure/msal-react';
 import { theme } from './theme';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -38,6 +40,21 @@ import UserManagementPage from './pages/admin/UserManagementPage';
 import NotificationManagementPage from './pages/admin/NotificationManagementPage';
 import CreditManagementPage from './pages/admin/CreditManagementPage';
 
+// Configuração do Microsoft MSAL
+const msalConfig = {
+  auth: {
+    clientId: import.meta.env.VITE_MICROSOFT_CLIENT_ID || '12345678-1234-1234-1234-123456789012', // Placeholder
+    authority: 'https://login.microsoftonline.com/common',
+    redirectUri: window.location.origin,
+  },
+  cache: {
+    cacheLocation: 'sessionStorage',
+    storeAuthStateInCookie: false,
+  },
+};
+
+const msalInstance = new PublicClientApplication(msalConfig);
+
 function App() {
   // Adicionar verificação inicial para recuperar dados de perfil locais quando a aplicação inicia
   useEffect(() => {
@@ -60,12 +77,13 @@ function App() {
   }, []);
 
   return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Router>
-          <AuthProvider>
-            <NotificationProvider>
+    <MsalProvider instance={msalInstance}>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Router>
+            <AuthProvider>
+              <NotificationProvider>
               <Routes>
                 <Route path="/" element={<Layout />}>
                   {/* Public routes */}
@@ -116,11 +134,12 @@ function App() {
                   <Route path="*" element={<Navigate to="/404" replace />} />
                 </Route>
               </Routes>
-            </NotificationProvider>
-          </AuthProvider>
-        </Router>
-      </ThemeProvider>
-    </GoogleOAuthProvider>
+              </NotificationProvider>
+            </AuthProvider>
+          </Router>
+        </ThemeProvider>
+      </GoogleOAuthProvider>
+    </MsalProvider>
   );
 }
 
