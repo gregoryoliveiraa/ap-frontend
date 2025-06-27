@@ -161,17 +161,19 @@ const HomePage: React.FC = () => {
               overflow: 'hidden',
               position: 'relative',
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              height: { xs: '300px', md: '450px' }
+              background: 'transparent'
             }}>
               <Box
                 component="img"
-                src="/assets/home/home.jpg"
+                src="/assets/home/home.png"
                 alt="Ilustração da Parceira Jurídica"
                 sx={{
                   width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
+                  height: 'auto',
+                  maxHeight: { xs: '400px', md: '500px' },
+                  objectFit: 'contain',
                   objectPosition: 'center',
+                  display: 'block'
                 }}
               />
               <Box sx={{
@@ -180,7 +182,8 @@ const HomePage: React.FC = () => {
                 left: 0,
                 width: '100%',
                 height: '100%',
-                background: `linear-gradient(to bottom right, ${alpha(theme.palette.primary.main, 0.4)}, ${alpha(theme.palette.secondary.main, 0.3)})`,
+                background: `linear-gradient(to bottom right, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`,
+                pointerEvents: 'none'
               }} />
             </Card>
           </Grid>
