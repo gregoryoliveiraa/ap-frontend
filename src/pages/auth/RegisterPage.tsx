@@ -26,6 +26,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { useMsal } from '@azure/msal-react';
 import FacebookIcon from '../../components/FacebookIcon';
 import MicrosoftIcon from '../../components/MicrosoftIcon';
+import { validateCPFOrCNPJ, formatCPFOrCNPJ } from '../../utils/cpfCnpjValidator';
 
 // Validation schema
 const validationSchema = yup.object({
@@ -36,6 +37,12 @@ const validationSchema = yup.object({
     .string()
     .email('Digite um email válido')
     .required('Email é obrigatório'),
+  cpf_cnpj: yup
+    .string()
+    .required('CPF ou CNPJ é obrigatório')
+    .test('cpf-cnpj-valid', 'CPF ou CNPJ inválido', function(value) {
+      return value ? validateCPFOrCNPJ(value) : false;
+    }),
   password: yup
     .string()
     .min(6, 'A senha deve ter pelo menos 6 caracteres')
@@ -59,6 +66,7 @@ const RegisterPage: React.FC = () => {
     initialValues: {
       nome_completo: '',
       email: '',
+      cpf_cnpj: '',
       password: '',
       confirmPassword: ''
     },
@@ -202,6 +210,28 @@ const RegisterPage: React.FC = () => {
                 error={formik.touched.email && Boolean(formik.errors.email)}
                 helperText={formik.touched.email && formik.errors.email}
                 disabled={loading}
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                required
+                fullWidth
+                id="cpf_cnpj"
+                label="CPF ou CNPJ"
+                name="cpf_cnpj"
+                value={formik.values.cpf_cnpj}
+                onChange={(e) => {
+                  // Formatar automaticamente enquanto digita
+                  const formatted = formatCPFOrCNPJ(e.target.value);
+                  formik.setFieldValue('cpf_cnpj', formatted);
+                }}
+                onBlur={formik.handleBlur}
+                error={formik.touched.cpf_cnpj && Boolean(formik.errors.cpf_cnpj)}
+                helperText={formik.touched.cpf_cnpj && formik.errors.cpf_cnpj}
+                disabled={loading}
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                inputProps={{ maxLength: 18 }}
               />
             </Grid>
             

@@ -54,6 +54,7 @@ interface AuthContextType {
 interface RegisterData {
   email: string;
   nome_completo: string;
+  cpf_cnpj: string;
   password: string;
 }
 
@@ -234,6 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const requestData = {
         email: userData.email,
         nome_completo: userData.nome_completo,
+        cpf_cnpj: userData.cpf_cnpj,
         password: userData.password,
       };
       
