@@ -34,7 +34,8 @@ import {
   List,
   Breadcrumbs,
   Divider,
-  ListItemButton
+  ListItemButton,
+  Menu
 } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
@@ -48,6 +49,7 @@ import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDocumentName } from '../../utils/formatUtils';
 import * as documentService from '../../services/documentService';
@@ -60,7 +62,7 @@ interface Document {
   created_at: Date;
   updated_at: Date;
   content?: string;
-  folder_path?: string | null;
+  folder_id?: string | null;
 }
 
 interface Folder {
@@ -96,6 +98,13 @@ const DocumentsPage: React.FC = () => {
   const [targetFolder, setTargetFolder] = useState<string | null>(null);
   const [deleteFolderDialog, setDeleteFolderDialog] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
+  const [renameFolderDialog, setRenameFolderDialog] = useState(false);
+  const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
+  const [newFolderNameRename, setNewFolderNameRename] = useState('');
+  
+  // Menu state for folder actions
+  const [folderMenuAnchorEl, setFolderMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
 
   // Fetch documents and folders from API
   const fetchData = useCallback(async () => {
@@ -194,7 +203,7 @@ const DocumentsPage: React.FC = () => {
   // Filter documents by current folder and search/category filters
   const filteredItems = () => {
     let filteredDocs = documents.filter(doc => 
-      (currentFolder === null ? (doc.folder_path === null || doc.folder_path === undefined || doc.folder_path === '') : doc.folder_path === currentFolder) &&
+      (currentFolder === null ? (doc.folder_id === null || doc.folder_id === undefined || doc.folder_id === '') : doc.folder_id === currentFolder) &&
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (categoryFilter === 'all' || doc.document_type === categoryFilter)
     );
@@ -266,6 +275,32 @@ const DocumentsPage: React.FC = () => {
       setError({ message: 'Não foi possível excluir a pasta. Por favor, tente novamente.', severity: 'error' });
     }
   };
+  
+  // Handle rename folder
+  const handleRenameFolder = async () => {
+    if (!folderToRename || !newFolderNameRename.trim()) return;
+    
+    try {
+      // Call the API to update the folder name - we need to implement this in documentService
+      const updatedFolder = await documentService.updateFolder(folderToRename.id, {
+        name: newFolderNameRename,
+        parent_id: folderToRename.parent_id
+      });
+      
+      // Update the folders state with the renamed folder
+      setFolders(folders.map(f => 
+        f.id === folderToRename.id ? updatedFolder : f
+      ));
+      
+      // Close the dialog and reset state
+      setRenameFolderDialog(false);
+      setFolderToRename(null);
+      setNewFolderNameRename('');
+    } catch (err) {
+      console.error('Erro ao renomear pasta:', err);
+      setError({ message: 'Não foi possível renomear a pasta. Por favor, tente novamente.', severity: 'error' });
+    }
+  };
 
   // Handle move document
   const handleMoveDocument = async () => {
@@ -305,6 +340,38 @@ const DocumentsPage: React.FC = () => {
       // Go to root
       setCurrentFolder(null);
     }
+  };
+  
+  // Handle folder menu open
+  const handleFolderMenuClick = (event: React.MouseEvent<HTMLElement>, folder: Folder) => {
+    event.stopPropagation();
+    setFolderMenuAnchorEl(event.currentTarget);
+    setSelectedFolder(folder);
+  };
+  
+  // Handle folder menu close
+  const handleFolderMenuClose = () => {
+    setFolderMenuAnchorEl(null);
+    setSelectedFolder(null);
+  };
+  
+  // Handle rename folder menu option
+  const handleRenameOption = () => {
+    if (selectedFolder) {
+      setFolderToRename(selectedFolder);
+      setNewFolderNameRename(selectedFolder.name);
+      setRenameFolderDialog(true);
+    }
+    handleFolderMenuClose();
+  };
+  
+  // Handle delete folder menu option
+  const handleDeleteOption = () => {
+    if (selectedFolder) {
+      setFolderToDelete(selectedFolder);
+      setDeleteFolderDialog(true);
+    }
+    handleFolderMenuClose();
   };
 
   // Extract unique categories for filter
@@ -364,6 +431,7 @@ const DocumentsPage: React.FC = () => {
               onClick={() => setCurrentFolder(null)}
               sx={{ textTransform: 'none' }}
               startIcon={<FolderIcon />}
+              color={currentFolder === null ? "primary" : "inherit"}
             >
               Raiz
             </Button>
@@ -373,6 +441,7 @@ const DocumentsPage: React.FC = () => {
                 component="button"
                 onClick={() => setCurrentFolder(folder.id)}
                 sx={{ textTransform: 'none' }}
+                color={index === folderPath.length - 1 ? "primary" : "inherit"}
                 disabled={index === folderPath.length - 1}
               >
                 {folder.name}
@@ -475,13 +544,10 @@ const DocumentsPage: React.FC = () => {
                   secondaryAction={
                     <IconButton 
                       edge="end" 
-                      aria-label="delete"
-                      onClick={() => {
-                        setFolderToDelete(folder);
-                        setDeleteFolderDialog(true);
-                      }}
+                      aria-label="menu"
+                      onClick={(event) => handleFolderMenuClick(event, folder)}
                     >
-                      <DeleteIcon />
+                      <MoreVertIcon />
                     </IconButton>
                   }
                 >
@@ -494,6 +560,26 @@ const DocumentsPage: React.FC = () => {
                 </ListItem>
               ))}
             </List>
+            
+            {/* Folder Action Menu */}
+            <Menu
+              anchorEl={folderMenuAnchorEl}
+              open={Boolean(folderMenuAnchorEl)}
+              onClose={handleFolderMenuClose}
+            >
+              <MenuItem onClick={handleRenameOption}>
+                <ListItemIcon>
+                  <EditIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Renomear</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={handleDeleteOption}>
+                <ListItemIcon>
+                  <DeleteIcon fontSize="small" color="error" />
+                </ListItemIcon>
+                <ListItemText>Excluir</ListItemText>
+              </MenuItem>
+            </Menu>
           </Paper>
         )}
 
@@ -681,6 +767,35 @@ const DocumentsPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Rename Folder Dialog */}
+      <Dialog
+        open={renameFolderDialog}
+        onClose={() => setRenameFolderDialog(false)}
+      >
+        <DialogTitle>Renomear pasta</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Digite o novo nome para a pasta "{folderToRename?.name}":
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Novo nome"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newFolderNameRename}
+            onChange={(e) => setNewFolderNameRename(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRenameFolderDialog(false)}>Cancelar</Button>
+          <Button onClick={handleRenameFolder} variant="contained">
+            Renomear
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Move Document Dialog */}
       <Dialog
@@ -735,7 +850,7 @@ const DocumentsPage: React.FC = () => {
           <Button 
             onClick={handleMoveDocument} 
             variant="contained"
-            disabled={movingDocument?.folder_path === targetFolder}
+            disabled={movingDocument?.folder_id === targetFolder}
           >
             Mover
           </Button>

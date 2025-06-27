@@ -557,7 +557,7 @@ const DashboardPage: React.FC = () => {
               ) : (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <Typography color="text.secondary">
-                    Nenhum documento recente
+                    O que você quer saber?
                   </Typography>
                   <Button 
                     variant="contained" 

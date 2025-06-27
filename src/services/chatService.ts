@@ -166,6 +166,13 @@ export const streamChat = async (
   onChunk: (chunk: string) => void
 ): Promise<void> => {
   try {
+    console.log('Iniciando streamChat com dados:', data);
+    
+    if (!data.session_id) {
+      console.error('Session ID is missing');
+      throw new Error('Session ID is required');
+    }
+    
     const response = await fetch(`${api.defaults.baseURL}/chat/stream`, {
       method: 'POST',
       headers: {
@@ -175,8 +182,12 @@ export const streamChat = async (
       body: JSON.stringify(data)
     });
 
+    console.log('Response status:', response.status);
+
     if (!response.ok) {
-      throw new Error('Network response was not ok');
+      const errorText = await response.text();
+      console.error('Stream API error:', response.status, errorText);
+      throw new Error(`API error: ${response.status} - ${errorText}`);
     }
 
     const reader = response.body?.getReader();
@@ -184,21 +195,33 @@ export const streamChat = async (
       throw new Error('No reader available');
     }
 
+    console.log('Stream reader obtained, starting to process chunks');
+
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        console.log('Stream completed');
+        break;
+      }
 
       const chunk = new TextDecoder().decode(value);
+      console.log('Received chunk:', chunk.substring(0, 50) + (chunk.length > 50 ? '...' : ''));
+      
       const lines = chunk.split('\n');
 
       for (const line of lines) {
         if (line.startsWith('data: ')) {
-          const data = JSON.parse(line.slice(6));
-          if (data.content) {
-            onChunk(data.content);
-          }
-          if (data.done) {
-            return;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.content) {
+              onChunk(data.content);
+            }
+            if (data.done) {
+              console.log('Stream signaled completion');
+              return;
+            }
+          } catch (parseError) {
+            console.error('Error parsing streaming response:', parseError, 'Line:', line);
           }
         }
       }

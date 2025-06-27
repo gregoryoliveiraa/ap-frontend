@@ -36,6 +36,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
+import FaviconIcon from './FaviconIcon';
 
 const Header: React.FC = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -134,15 +135,10 @@ const Header: React.FC = () => {
             to={user ? "/dashboard" : "/"}
             sx={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}
           >
-            <Box 
-              component="img" 
-              src="/logo.png" 
-              alt="Advogada Parceira" 
-              onError={(e) => { console.error("Error loading logo:", e); }}
-              onLoad={() => { console.log("Logo loaded successfully"); }}
+            <FaviconIcon 
               sx={{ 
                 height: 45, 
-                width: 'auto',
+                width: 45,
                 mr: 2,
                 display: { xs: 'block', sm: 'block' },
                 borderRadius: '8px',

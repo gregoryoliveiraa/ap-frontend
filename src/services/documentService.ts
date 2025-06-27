@@ -9,7 +9,7 @@ export interface Document {
   tokens_used?: number;
   created_at: Date;
   updated_at: Date;
-  folder_path?: string | null;
+  folder_id?: string | null;
   version?: number;
   status?: 'draft' | 'final';
   metadata?: Record<string, any>;
@@ -266,7 +266,7 @@ export async function getUserDocuments(): Promise<Document[]> {
       ...doc,
       created_at: new Date(doc.created_at),
       updated_at: new Date(doc.updated_at),
-      folder_path: doc.folder_path || null,
+      folder_id: doc.folder_id || null,
       document_type: doc.document_type || 'Outro',
       title: doc.title || 'Sem título'
     }));
@@ -472,6 +472,27 @@ export const deleteFolder = async (folderId: string): Promise<void> => {
 };
 
 /**
+ * Atualizar uma pasta existente (renomear ou mover)
+ */
+export const updateFolder = async (
+  folderId: string, 
+  data: { name?: string; parent_id?: string | null }
+): Promise<Folder> => {
+  try {
+    const response = await api.put(`/documents/folders/${folderId}`, data);
+    const folder = response.data.data;
+    return {
+      ...folder,
+      created_at: new Date(folder.created_at),
+      updated_at: new Date(folder.updated_at)
+    };
+  } catch (error) {
+    console.error('Erro ao atualizar pasta:', error);
+    throw error;
+  }
+};
+
+/**
  * Mover um documento para outra pasta
  */
 export const moveDocument = async (documentId: string, targetFolderId: string | null): Promise<Document> => {
@@ -483,7 +504,7 @@ export const moveDocument = async (documentId: string, targetFolderId: string | 
     const doc = response.data.data;
     return {
       ...doc,
-      folder_path: doc.folder_path, // Ensure folder_path is properly set
+      folder_id: doc.folder_id, // Ensure folder_id is properly set
       created_at: new Date(doc.created_at),
       updated_at: new Date(doc.updated_at)
     };

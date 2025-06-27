@@ -12,6 +12,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import { alpha } from '@mui/material/styles';
+import AddIcon from '@mui/icons-material/Add';
 
 // Styled components with fixed heights for proper scrolling
 const ChatContainer = styled(Box)(({ theme }) => ({
@@ -31,7 +32,7 @@ const MessagesContainer = styled(Box)({
   display: 'flex',
   flexDirection: 'column',
   gap: '8px',
-  height: 'calc(80vh - 70px)'
+  height: 'calc(80vh - 70px)',
 });
 
 interface MessageBubbleProps {
@@ -100,8 +101,8 @@ const WelcomeMessage = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
   textAlign: 'center',
   marginBottom: theme.spacing(2),
-  backgroundColor: theme.palette.primary.main,
-  color: theme.palette.primary.contrastText,
+  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  color: theme.palette.text.primary,
 }));
 
 interface ChatProps {
@@ -118,15 +119,15 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<ChatProvider>('openai');
-  const [showArchived, setShowArchived] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<ChatSession | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadSessions();
-  }, [showArchived]);
+  }, []);
 
   useEffect(() => {
     if (activeSessionId) {
@@ -134,12 +135,29 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
     }
   }, [activeSessionId]);
 
+  // Simplificar o efeito de scroll - apenas rola quando as mensagens mudam
   useEffect(() => {
-    scrollToBottom();
+    console.log("Mensagens mudaram, rolando para o final");
+    setTimeout(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }
+    }, 100);
   }, [messages]);
 
+  // Efeito para carregar o último chat quando a página é carregada
+  useEffect(() => {
+    if (sessions.length > 0 && !currentSession && !activeSessionId) {
+      const lastSession = sessions[0]; // O primeiro da lista é o mais recente
+      console.log("Carregando o último chat automaticamente:", lastSession.id);
+      handleSelectSession(lastSession);
+    }
+  }, [sessions, currentSession, activeSessionId]);
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+    }
   };
 
   const loadSession = async (id: string) => {
@@ -157,7 +175,7 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
         role: msg.role
       })) || [];
       setMessages(convertedMessages);
-      setInput(convertedMessages[convertedMessages.length - 1]?.content || '');
+      setInput('');
     } catch (error) {
       console.error('Error loading session:', error);
     }
@@ -167,8 +185,12 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
     try {
       const sessions = await getChatSessions();
       setSessions(sessions);
+      
+      // Se não houver sessão ativa e temos sessões, carregue a mais recente
       if (sessions.length > 0 && !currentSession && !activeSessionId) {
+        console.log("Selecionando sessão mais recente:", sessions[0].id);
         setCurrentSession(sessions[0]);
+        await loadSession(sessions[0].id);
       }
     } catch (error) {
       console.error('Error loading sessions:', error);
@@ -177,11 +199,105 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
 
   const handleCreateSession = async () => {
     try {
+      setIsLoading(true);
       const newSession = await createChatSession();
-      setSessions([newSession, ...sessions]);
+      
+      // Garante que temos um ID de sessão válido
+      if (!newSession || !newSession.id) {
+        throw new Error("Failed to create a valid session");
+      }
+      
+      // Atualiza o estado com a nova sessão
+      await loadSessions();
+      setMessages([]);
       setCurrentSession(newSession);
+      setInput('');
+      
+      // Log para debug
+      console.log("Nova sessão criada:", newSession);
     } catch (error) {
       console.error('Error creating session:', error);
+      setError('Error creating new chat. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Nova função para lidar com novas conversas, usando o método não-streaming para a primeira mensagem
+  const handleFirstMessage = async () => {
+    if (!input.trim() || !currentSession) return;
+    
+    console.log("Enviando primeira mensagem para sessão:", currentSession);
+
+    const userMessage: Message = {
+      id: `temp-user-${Date.now()}`,
+      content: input,
+      isUser: true,
+      created_at: new Date(),
+      session_id: currentSession.id,
+      role: 'user'
+    };
+
+    // Guardar o input atual e depois limpar
+    const messageToSend = input;
+    setInput('');
+    
+    // Adicione a mensagem do usuário ao estado
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    try {
+      // Garante que temos uma sessão válida
+      if (!currentSession.id) {
+        throw new Error("Invalid session ID");
+      }
+
+      console.log("Enviando primeira mensagem não-streaming para sessão ID:", currentSession.id);
+      
+      // Usa o método sendMessage ao invés de streamChat para a primeira mensagem
+      const response = await sendMessage({
+        message: messageToSend,
+        session_id: currentSession.id,
+        provider: selectedProvider
+      });
+
+      const assistantMessage: Message = {
+        id: '',
+        content: response.message,
+        isUser: false,
+        created_at: new Date(),
+        session_id: currentSession.id,
+        tokens_used: response.tokens_used,
+        provider: response.provider,
+        role: 'assistant'
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+      
+      console.log("Primeira mensagem enviada com sucesso");
+      
+      // Após a primeira mensagem, atualize a lista de sessões e recarregue a sessão atual
+      await loadSessions();
+      if (currentSession?.id) {
+        await loadSession(currentSession.id);
+      }
+    } catch (error) {
+      console.error('Error sending first message:', error);
+      setError(`Error sending message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Se houver um erro, adicione uma mensagem de erro
+      setMessages(prev => {
+        return [...prev, {
+          id: `error-${Date.now()}`,
+          content: "Desculpe, ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.",
+          isUser: false,
+          created_at: new Date(),
+          session_id: currentSession.id,
+          role: 'assistant'
+        }];
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -200,7 +316,7 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
         role: msg.role
       })) || [];
       setMessages(convertedMessages);
-      setInput(convertedMessages[convertedMessages.length - 1]?.content || '');
+      setInput('');
     } catch (error) {
       console.error('Error loading session:', error);
     }
@@ -228,54 +344,19 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!input.trim() || !currentSession) return;
-
-    const userMessage: Message = {
-      id: '', // Will be set by the backend
-      content: input,
-      isUser: true,
-      created_at: new Date(),
-      session_id: currentSession.id,
-      role: 'user'
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    try {
-      const response = await sendMessage({
-        message: input,
-        session_id: currentSession.id,
-        provider: selectedProvider
-      });
-
-      const assistantMessage: Message = {
-        id: '', // Will be set by the backend
-        content: response.message,
-        isUser: false,
-        created_at: new Date(),
-        session_id: currentSession.id,
-        tokens_used: response.tokens_used,
-        provider: response.provider,
-        role: 'assistant'
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setError('Error sending message. Please try again later.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleStreamChat = async () => {
+    // Se for uma sessão recém-criada sem mensagens, use o método não-streaming
+    if (currentSession && messages.length === 0) {
+      return handleFirstMessage();
+    }
+    
     if (!input.trim() || !currentSession) return;
+    
+    // Log para debug
+    console.log("Enviando mensagem para sessão:", currentSession);
 
     const userMessage: Message = {
-      id: '', // Will be set by the backend
+      id: `temp-user-${Date.now()}`, // ID temporário para garantir a unicidade
       content: input,
       isUser: true,
       created_at: new Date(),
@@ -283,13 +364,23 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
       role: 'user'
     };
 
+    // Guardar o input atual e depois limpar
+    const messageToSend = input;
+    setInput(''); // Limpar o campo de entrada imediatamente
+
+    // Adicione a mensagem do usuário ao estado
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
     setIsLoading(true);
 
     try {
-      let assistantMessage: Message = {
-        id: '', // Will be set by the backend
+      // Garante que temos uma sessão válida
+      if (!currentSession.id) {
+        throw new Error("Invalid session ID");
+      }
+
+      // Crie uma mensagem do assistente vazia para começar
+      const assistantMessage: Message = {
+        id: `temp-assistant-${Date.now()}`, // ID temporário para garantir a unicidade
         content: '',
         isUser: false,
         created_at: new Date(),
@@ -297,30 +388,71 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
         role: 'assistant'
       };
 
+      // Adicione a mensagem vazia ao estado
       setMessages(prev => [...prev, assistantMessage]);
 
+      // Log para debug
+      console.log("Iniciando streaming para sessão ID:", currentSession.id);
+
+      // Variável para acumular a resposta
+      let accumulatedResponse = '';
+
+      // Faz a chamada de streaming e atualiza a mensagem do assistente à medida que os chunks chegam
       await streamChat(
         {
-          message: input,
+          message: messageToSend,
           session_id: currentSession.id,
           provider: selectedProvider
         },
         (chunk) => {
+          // Acumula a resposta
+          accumulatedResponse += chunk;
+          
+          // Atualiza a última mensagem (a do assistente) com o novo chunk completo
           setMessages(prev => {
             const newMessages = [...prev];
+            // A última mensagem deve ser do assistente
             const lastMessage = newMessages[newMessages.length - 1];
             if (lastMessage && !lastMessage.isUser) {
-              lastMessage.content += chunk;
+              lastMessage.content = accumulatedResponse;
             }
-            return newMessages;
+            return [...newMessages]; // Retorna um novo array para garantir reatividade
           });
+          
+          // Força o scroll para o final a cada chunk
+          setTimeout(scrollToBottom, 10);
         }
       );
+
+      console.log("Streaming concluído com sucesso");
+      
+      // Após o streaming terminar, atualize a lista de sessões e recarregue a sessão atual
+      await loadSessions();
+      if (currentSession?.id) {
+        await loadSession(currentSession.id);
+      }
+      
+      // Força o scroll após terminar
+      setTimeout(scrollToBottom, 100);
+      setTimeout(scrollToBottom, 300);
     } catch (error) {
       console.error('Error streaming chat:', error);
-      setError('Error sending message. Please try again later.');
+      setError(`Error sending message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Se houver um erro, adicione uma mensagem de erro
+      setMessages(prev => {
+        const newMessages = [...prev];
+        // Se a última mensagem for do assistente (vazia), substitua-a com uma mensagem de erro
+        if (newMessages.length > 0 && !newMessages[newMessages.length - 1].isUser) {
+          newMessages[newMessages.length - 1].content = 
+            "Desculpe, ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.";
+        }
+        return newMessages;
+      });
     } finally {
       setIsLoading(false);
+      // Força o scroll após terminar o loading
+      setTimeout(scrollToBottom, 200);
     }
   };
 
@@ -342,6 +474,7 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
         role: msg.role
       })) || [];
       setMessages(convertedMessages);
+      setInput('');
     } catch (error) {
       console.error('Error loading messages:', error);
       setError('Error loading chat messages. Please try again later.');
@@ -385,22 +518,25 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
         </Box>
       )}
       
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4">Chat</Typography>
-        <Button variant="contained" onClick={handleCreateSession}>
-          Nova Conversa
-        </Button>
-      </Box>
-
       <ChatLayout>
         <Sidebar>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Histórico</Typography>
-            <Button
-              startIcon={<ArchiveIcon />}
-              onClick={() => setShowArchived(!showArchived)}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            pb: 2,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            mb: 2
+          }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>Histórico de Conversas</Typography>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              startIcon={<AddIcon />}
+              onClick={handleCreateSession}
+              fullWidth
             >
-              {showArchived ? 'Ativos' : 'Arquivados'}
+              Nova Conversa
             </Button>
           </Box>
           <List>
@@ -435,14 +571,11 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
         <MainContent>
           {currentSession ? (
             <>
-              <MessagesContainer>
+              <MessagesContainer ref={messagesContainerRef}>
                 {messages.length === 0 && (
                   <WelcomeMessage>
-                    <Typography variant="h5" gutterBottom>
-                      Bem-vindo(a), {user?.email}!
-                    </Typography>
                     <Typography variant="body1">
-                      Como posso ajudar você hoje?
+                      Como posso ajudar você a acelerar seu dia hoje?
                     </Typography>
                   </WelcomeMessage>
                 )}
@@ -461,7 +594,11 @@ export const Chat: React.FC<ChatProps> = ({ sessionId: propSessionId }) => {
                     )}
                   </MessageBubble>
                 ))}
-                <div ref={messagesEndRef} />
+                <div 
+                  ref={messagesEndRef} 
+                  style={{ height: '50px', width: '100%', clear: 'both' }} 
+                  id="chat-end-anchor"
+                />
               </MessagesContainer>
 
               <InputContainer>
