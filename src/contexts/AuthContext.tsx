@@ -40,7 +40,7 @@ interface AuthContextType {
   register: (userData: RegisterData) => Promise<void>;
   loginWithGoogle: (token: string) => Promise<void>;
   loginWithFacebook: (token: string) => Promise<void>;
-  loginWithMicrosoft: (token: string) => Promise<void>;
+
   logout: () => void;
   clearError: () => void;
   updateUser: (userData: UpdateUserData) => Promise<User | null>;
@@ -476,47 +476,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithMicrosoft = async (token: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Chamar o endpoint de login com Microsoft no backend
-      const response = await api.post('/auth/microsoft', { token }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      const { access_token } = response.data;
-      
-      localStorage.setItem('token', access_token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-      
-      try {
-        // Obter dados do usuário
-        const userResponse = await api.get('/users/me');
-        setUser(userResponse.data);
-        
-        navigate('/dashboard');
-      } catch (userErr: any) {
-        console.error('Erro ao obter dados do usuário Microsoft:', userErr);
-        const errorMessage = typeof userErr.response?.data?.detail === 'object'
-          ? 'Erro ao obter dados do usuário'
-          : userErr.response?.data?.detail || 'Erro ao obter dados do usuário';
-        setError(errorMessage);
-        localStorage.removeItem('token');
-      }
-    } catch (err: any) {
-      console.error('Erro no login com Microsoft:', err);
-      const errorMessage = typeof err.response?.data?.detail === 'object'
-        ? 'Erro no login com Microsoft. Tente novamente.'
-        : err.response?.data?.detail || 'Erro no login com Microsoft. Tente novamente.';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+
   
   const updatePassword = async (currentPassword: string, newPassword: string) => {
     try {
@@ -560,7 +520,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     register,
     loginWithGoogle,
     loginWithFacebook,
-    loginWithMicrosoft,
+
     logout,
     clearError,
     updateUser,

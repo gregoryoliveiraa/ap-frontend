@@ -23,9 +23,7 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import GoogleIcon from '@mui/icons-material/Google';
 import { useGoogleLogin } from '@react-oauth/google';
-import { useMsal } from '@azure/msal-react';
 import FacebookIcon from '../../components/FacebookIcon';
-import MicrosoftIcon from '../../components/MicrosoftIcon';
 import { validateCPFOrCNPJ, formatCPFOrCNPJ } from '../../utils/cpfCnpjValidator';
 
 // Validation schema
@@ -54,12 +52,12 @@ const validationSchema = yup.object({
 });
 
 const RegisterPage: React.FC = () => {
-  const { register, loginWithGoogle, loginWithFacebook, loginWithMicrosoft, error, loading, clearError } = useAuth();
+  const { register, loginWithGoogle, loginWithFacebook, error, loading, clearError } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isGoogleLoginDisabled, setIsGoogleLoginDisabled] = useState(false);
-  const { instance } = useMsal();
+
 
   // Form handling with Formik
   const formik = useFormik({
@@ -138,24 +136,7 @@ const RegisterPage: React.FC = () => {
     }
   };
 
-  // Configuração do login com Microsoft
-  const handleMicrosoftLogin = async () => {
-    if (loading) return;
-    
-    try {
-      const loginRequest = {
-        scopes: ['User.Read'],
-        prompt: 'select_account'
-      };
-      
-      const response = await instance.loginPopup(loginRequest);
-      if (response.accessToken) {
-        await loginWithMicrosoft(response.accessToken);
-      }
-    } catch (error) {
-      console.error('Erro no login com Microsoft:', error);
-    }
-  };
+
 
   return (
     <Container maxWidth="md">
@@ -339,17 +320,7 @@ const RegisterPage: React.FC = () => {
             Cadastrar com Facebook
           </Button>
 
-          <Button
-            fullWidth
-            variant="outlined"
-            color="primary"
-            startIcon={<MicrosoftIcon />}
-            onClick={handleMicrosoftLogin}
-            sx={{ mb: 2 }}
-            disabled={loading}
-          >
-            Cadastrar com Microsoft
-          </Button>
+
           
           <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Link component={RouterLink} to="/login" variant="body2">
